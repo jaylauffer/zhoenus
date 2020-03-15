@@ -1,11 +1,11 @@
 {
-  "name": "compute",
+  "name": "beta_california_oxygen_958",
   "project_version": "0.0.1",
-  "sdk_version": "14.4.1",
+  "sdk_version": "14.4.2-b4453-56151e5-WORKER-SNAPSHOT",
   "dependencies": [
     {
       "name": "standard_library",
-      "version": "14.4.1"
+      "version": "14.4.2-b4453-56151e5-WORKER-SNAPSHOT"
     }
   ]
 }
