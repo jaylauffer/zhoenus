@@ -1,3 +1,4 @@
+
 {
   "build": {
     "tasks": [
@@ -24,23 +25,6 @@
         "UnrealWorker"
       ]
     },
-    "entity_interest": {
-      "range_entity_interest": {
-        "radius": 50
-      }
-    },
-    "streaming_query": [
-      {
-        "global_component_streaming_query": {
-          "component_name": "unreal.SingletonManager"
-        }
-      },
-      {
-        "global_component_streaming_query": {
-          "component_name": "unreal.Singleton"
-        }
-      }
-    ],
     "component_delivery": {
       "default": "RELIABLE_ORDERED",
       "checkout_all_initially": true
@@ -51,6 +35,7 @@
       "artifact_name": "UnrealEditor@Windows.zip",
       "command": "StartEditor.bat",
       "arguments": [
+        "ThirdPersonExampleMap",
         "-server",
         "-stdout",
         "-nowrite",
@@ -59,6 +44,8 @@
         "-nopause",
         "-messaging",
         "-SaveToUserDir",
+        "+workerType",
+        "UnrealWorker",
         "+appName",
         "${IMPROBABLE_PROJECT_NAME}",
         "+receptionistHost",
@@ -81,6 +68,7 @@
       "arguments": [
         "${IMPROBABLE_WORKER_ID}",
         "${IMPROBABLE_LOG_FILE}",
+        "ThirdPersonExampleMap",
         "+appName",
         "${IMPROBABLE_PROJECT_NAME}",
         "+receptionistHost",
@@ -93,7 +81,8 @@
         "${IMPROBABLE_WORKER_ID}",
         "+linkProtocol",
         "Tcp",
-        "-NoVerifyGC"
+        "-NoVerifyGC",
+		"-OverrideSpatialNetworking"
       ]
     }
   }
