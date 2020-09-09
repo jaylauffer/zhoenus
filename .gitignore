@@ -3,3 +3,4 @@ spatial/build/*
 spatial/logs/*
 spatial/schema/*
 spatial/snapshots/*
+cooked/
