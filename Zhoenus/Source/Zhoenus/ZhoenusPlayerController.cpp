@@ -34,7 +34,7 @@ void AZhoenusPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (SVirtualJoystick::ShouldDisplayTouchInterface() && wTouchUI && IsLocalPlayerController())
+	if (IsLocalPlayerController() && SVirtualJoystick::ShouldDisplayTouchInterface() && wTouchUI)
 	{
 		touchUI = CreateWidget<UZhoenusTouchUI>(this, wTouchUI);
 		if (touchUI)
