@@ -159,6 +159,14 @@
 				"Linux",
 				"Mac"
 			]
+		},
+		{
+			"Name": "NetworkPrediction",
+			"Enabled": true
+		},
+		{
+			"Name": "NetworkPredictionExtras",
+			"Enabled": true
 		}
 	],
 	"TargetPlatforms": [

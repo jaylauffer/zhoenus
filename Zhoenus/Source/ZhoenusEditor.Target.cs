@@ -9,5 +9,8 @@ public class ZhoenusEditorTarget : TargetRules
 	{
 		Type = TargetType.Editor;
 		ExtraModuleNames.Add("Zhoenus");
+
+		bCompileChaos = true;
+		bUseChaos = true;
 	}
 }

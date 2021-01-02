@@ -3,7 +3,22 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
+#include "FlyingMovementComponent.h"
+#include "FlyingMovementSimulation.h"
 #include "ZhoenusPawn.generated.h"
+
+struct FMovementData
+{
+	FVector OldPosition;
+	FVector NewPosition;
+	FQuat OldRotation;
+	FQuat NewRotation;
+	float Acceleration;
+	float PitchSpeed;
+	float YawSpeed;
+	float RollSpeed;
+	float Timestamp;
+};
 
 UCLASS(Config=Game)
 class AZhoenusPawn : public APawn
@@ -62,8 +77,16 @@ protected:
 	// Begin APawn overrides
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override; // Allows binding actions/axes to functions
 	// End APawn overrides
-	
+	void ProduceInput(const int32 DeltaMS, FFlyingMovementInputCmd& Cmd);
+
 private:
+
+	UPROPERTY(Category = Movement, VisibleAnywhere)
+	UFlyingMovementComponent* FlyingMovementComponent;
+
+	FQuat CachedInput;
+	//float CachedThrustInput;
+	//FVector CachedRotationInput;
 
 	bool bCanFire;
 	FVector GunOffset;
@@ -91,29 +114,37 @@ private:
 	UPROPERTY(Category=Yaw, EditAnywhere)
 	float MinSpeed;
 
+	float CurrentAcceleration;
+	float TargetPitchSpeed;
+	float TargetYawSpeed;
+	float TargetRollSpeed;
+
 	/** Current forward speed */
-	UPROPERTY(Replicated)
 	float CurrentForwardSpeed;
 
 	/** Current yaw speed */
-	UPROPERTY(Replicated)
 	float CurrentYawSpeed;
 
 	/** Current pitch speed */
-	UPROPERTY(Replicated)
 	float CurrentPitchSpeed;
 
 	/** Current roll speed */
-	UPROPERTY(Replicated)
 	float CurrentRollSpeed;
 
-	UPROPERTY(Replicated)
 	float AutoCorrectRate;
 
-	UPROPERTY(Replicated)
 	float CurrentRateOfFire;
+	float CurrentTimestamp;
+	float LastClientTimestamp;
+	void ApplyMovement(float DeltaSeconds, FVector& OldPosition, FVector& NewPosition, FQuat& OldRotation, FQuat& NewRotation);
 
+	TArray<FMovementData> SavedMoves;
 public:
+	virtual void BeginPlay() override;
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerMove(const FVector& OldPosition, const FVector& NewPostition, const FQuat& OldRotation, const FQuat& NewRotation
+		, float InAcceleration, float InPitchSpeed, float InYawSpeed, float InRollSpeed, float Timestamp);
 	/** Returns PlaneMesh subobject **/
 	FORCEINLINE class UStaticMeshComponent* GetPlaneMesh() const { return PlaneMesh; }
 	/** Returns SpringArm subobject **/

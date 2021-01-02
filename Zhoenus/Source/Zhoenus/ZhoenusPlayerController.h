@@ -26,25 +26,43 @@ protected:
 
 private:
 	/** Bound to the thrust axis */
-	UFUNCTION(Server, Reliable, WithValidation)
+	UFUNCTION()
 	void ThrustInput(float Val);
 
-	/** Bound to the vertical axis */
 	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerThrustInput(float Val);
+
+	/** Bound to the vertical axis */
+	UFUNCTION()
 	void MoveUpInput(float Val);
 
-	/** Bound to the horizontal axis */
 	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerMoveUpInput(float Val);
+
+	/** Bound to the horizontal axis */
+	UFUNCTION()
 	void MoveRightInput(float Val);
 
 	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerMoveRightInput(float Val);
+
+	UFUNCTION()
 	void RotateRightInput(float Val);
 
 	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRotateRightInput(float Val);
+
+	UFUNCTION()
 	void DisengageAutoCorrect(float Val);
 
 	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerDisengageAutoCorrect(float Val);
+
+	UFUNCTION()
 	void FireWeapon(float Val);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerFireWeapon(float Val);
 
 	//UFUNCTION(Server, Reliable)
 	UFUNCTION()

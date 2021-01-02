@@ -53,15 +53,15 @@ void AZhoenusPlayerController::BeginPlay()
 void AZhoenusPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
-	InputComponent->BindAxis("Thrust", this, &AZhoenusPlayerController::ThrustInput);
-	InputComponent->BindAxis("MoveUp", this, &AZhoenusPlayerController::MoveUpInput);
-	InputComponent->BindAxis("MoveRight", this, &AZhoenusPlayerController::RotateRightInput);
-	InputComponent->BindAxis("RotateRight", this, &AZhoenusPlayerController::MoveRightInput);
-	if (!SVirtualJoystick::ShouldDisplayTouchInterface())
-	{
-		InputComponent->BindAxis("DisengageAutoCorrect", this, &AZhoenusPlayerController::DisengageAutoCorrect);
-		InputComponent->BindAxis("FireWeapon", this, &AZhoenusPlayerController::FireWeapon);
-	}
+	//InputComponent->BindAxis("Thrust", this, &AZhoenusPlayerController::ThrustInput);
+	//InputComponent->BindAxis("MoveUp", this, &AZhoenusPlayerController::MoveUpInput);
+	//InputComponent->BindAxis("MoveRight", this, &AZhoenusPlayerController::RotateRightInput);
+	//InputComponent->BindAxis("RotateRight", this, &AZhoenusPlayerController::MoveRightInput);
+	//if (!SVirtualJoystick::ShouldDisplayTouchInterface())
+	//{
+	//	InputComponent->BindAxis("DisengageAutoCorrect", this, &AZhoenusPlayerController::DisengageAutoCorrect);
+	//	InputComponent->BindAxis("FireWeapon", this, &AZhoenusPlayerController::FireWeapon);
+	//}
 }
 
 void AZhoenusPlayerController::OnPossess(APawn* pawn)
@@ -76,7 +76,7 @@ void AZhoenusPlayerController::OnUnPossess()
 	ScreenDebug("Unpossessed");
 }
 
-void AZhoenusPlayerController::ThrustInput_Implementation(float Val)
+void AZhoenusPlayerController::ThrustInput(float Val)
 {
 	AZhoenusPawn* pawn{ Cast<AZhoenusPawn>(GetPawn()) };
 	if (pawn)
@@ -85,12 +85,21 @@ void AZhoenusPlayerController::ThrustInput_Implementation(float Val)
 	}
 }
 
-bool AZhoenusPlayerController::ThrustInput_Validate(float)
+void AZhoenusPlayerController::ServerThrustInput_Implementation(float Val)
+{
+	AZhoenusPawn* pawn{ Cast<AZhoenusPawn>(GetPawn()) };
+	if (pawn)
+	{
+		pawn->ThrustInput(Val);
+	}
+}
+
+bool AZhoenusPlayerController::ServerThrustInput_Validate(float)
 {
 	return true;
 }
 
-void AZhoenusPlayerController::MoveUpInput_Implementation(float Val)
+void AZhoenusPlayerController::MoveUpInput(float Val)
 {
 	AZhoenusPawn* pawn{ Cast<AZhoenusPawn>(GetPawn()) };
 	if (pawn)
@@ -99,12 +108,21 @@ void AZhoenusPlayerController::MoveUpInput_Implementation(float Val)
 	}
 }
 
-bool AZhoenusPlayerController::MoveUpInput_Validate(float)
+void AZhoenusPlayerController::ServerMoveUpInput_Implementation(float Val)
+{
+	AZhoenusPawn* pawn{ Cast<AZhoenusPawn>(GetPawn()) };
+	if (pawn)
+	{
+		pawn->MoveUpInput(Val);
+	}
+}
+
+bool AZhoenusPlayerController::ServerMoveUpInput_Validate(float)
 {
 	return true;
 }
 
-void AZhoenusPlayerController::MoveRightInput_Implementation(float Val)
+void AZhoenusPlayerController::MoveRightInput(float Val)
 {
 	AZhoenusPawn* pawn{ Cast<AZhoenusPawn>(GetPawn()) };
 	if (pawn)
@@ -113,12 +131,21 @@ void AZhoenusPlayerController::MoveRightInput_Implementation(float Val)
 	}
 }
 
-bool AZhoenusPlayerController::MoveRightInput_Validate(float)
+void AZhoenusPlayerController::ServerMoveRightInput_Implementation(float Val)
+{
+	AZhoenusPawn* pawn{ Cast<AZhoenusPawn>(GetPawn()) };
+	if (pawn)
+	{
+		pawn->MoveRightInput(Val);
+	}
+}
+
+bool AZhoenusPlayerController::ServerMoveRightInput_Validate(float)
 {
 	return true;
 }
 
-void AZhoenusPlayerController::RotateRightInput_Implementation(float Val)
+void AZhoenusPlayerController::RotateRightInput(float Val)
 {
 	AZhoenusPawn* pawn{ Cast<AZhoenusPawn>(GetPawn()) };
 	if (pawn)
@@ -127,12 +154,21 @@ void AZhoenusPlayerController::RotateRightInput_Implementation(float Val)
 	}
 }
 
-bool AZhoenusPlayerController::RotateRightInput_Validate(float)
+void AZhoenusPlayerController::ServerRotateRightInput_Implementation(float Val)
+{
+	AZhoenusPawn* pawn{ Cast<AZhoenusPawn>(GetPawn()) };
+	if (pawn)
+	{
+		pawn->RotateRightInput(Val);
+	}
+}
+
+bool AZhoenusPlayerController::ServerRotateRightInput_Validate(float)
 {
 	return true;
 }
 
-void AZhoenusPlayerController::DisengageAutoCorrect_Implementation(float Val)
+void AZhoenusPlayerController::DisengageAutoCorrect(float Val)
 {
 	AZhoenusPawn* pawn{ Cast<AZhoenusPawn>(GetPawn()) };
 	if (pawn)
@@ -142,12 +178,22 @@ void AZhoenusPlayerController::DisengageAutoCorrect_Implementation(float Val)
 	}
 }
 
-bool AZhoenusPlayerController::DisengageAutoCorrect_Validate(float)
+void AZhoenusPlayerController::ServerDisengageAutoCorrect_Implementation(float Val)
+{
+	AZhoenusPawn* pawn{ Cast<AZhoenusPawn>(GetPawn()) };
+	if (pawn)
+	{
+		//UE_LOG(LogZhoenus, Display, TEXT("Engage Auto Correct %f"), Val);
+		pawn->DisengageAutoCorrect(Val);
+	}
+}
+
+bool AZhoenusPlayerController::ServerDisengageAutoCorrect_Validate(float)
 {
 	return true;
 }
 
-void AZhoenusPlayerController::FireWeapon_Implementation(float Val)
+void AZhoenusPlayerController::FireWeapon(float Val)
 {
 	AZhoenusPawn* pawn{ Cast<AZhoenusPawn>(GetPawn()) };
 	if (pawn)
@@ -157,7 +203,17 @@ void AZhoenusPlayerController::FireWeapon_Implementation(float Val)
 	}
 }
 
-bool AZhoenusPlayerController::FireWeapon_Validate(float)
+void AZhoenusPlayerController::ServerFireWeapon_Implementation(float Val)
+{
+	AZhoenusPawn* pawn{ Cast<AZhoenusPawn>(GetPawn()) };
+	if (pawn)
+	{
+		//UE_LOG(LogZhoenus, Display, TEXT("Fire Weapon %f"), Val);
+		pawn->FireWeapon(Val);
+	}
+}
+
+bool AZhoenusPlayerController::ServerFireWeapon_Validate(float)
 {
 	return true;
 }
