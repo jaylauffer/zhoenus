@@ -10,7 +10,7 @@ public class ZhoenusEditorTarget : TargetRules
 		Type = TargetType.Editor;
 		ExtraModuleNames.Add("Zhoenus");
 		DefaultBuildSettings = BuildSettingsVersion.V2;
-
+		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 		bCompileChaos = true;
 		bUseChaos = true;
 	}
