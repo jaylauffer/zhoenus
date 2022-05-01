@@ -6,8 +6,9 @@
 #include "Engine/GameEngine.h"
 #include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
-#include "DonutFlyerAIController.generated.h"
+#include <optional>
 
+#include "DonutFlyerAIController.generated.h"
 
 /**
  * 
@@ -43,6 +44,7 @@ private:
 	float currentStateEntered{ 0.f };
 	float playerTargetScore(APawn* pawn);
 	void DecreaseAggro(float deltaSeconds);
+	std::optional<FVector> lastChase;
 
 	struct PawnAggro
 	{

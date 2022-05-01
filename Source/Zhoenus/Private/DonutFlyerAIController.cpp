@@ -115,6 +115,7 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 		break;
 	case SEARCHING:
 		{
+			lastChase.reset();
 			FVector Start{ pawn->GetActorLocation() };
 			//FVector End{ Start.X + 1};
 			FCollisionQueryParams CollisionParams;
@@ -156,6 +157,7 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 	case CHASING:
 		if (APawn *target = GetTargetPlayer())
 		{
+			FVector targetLoc{ target->GetActorLocation() };
 			pawn->DisengageAutoCorrect(0.0f);
 			FVector Start{ pawn->GetActorLocation() };
 			FVector ForwardVector{ pawn->GetActorForwardVector() };
@@ -190,11 +192,14 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 			}
 			else
 			{
-				// - is forward + is back
-				pawn->ThrustInput(-0.05f);
+				if (lastChase != targetLoc)
+				{
+					// - is forward + is back
+					pawn->ThrustInput(-0.05f);
+				}
 			}
-			FVector targetLoc{ target->GetActorLocation() };
 			pawn->TargetRot = (targetLoc - Start).Rotation();
+			lastChase = targetLoc;
 		}
 		else
 		{
