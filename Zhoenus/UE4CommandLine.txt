@@ -1,1 +1,0 @@
-../../../Zhoenus/Zhoenus.uproject  /Game/FlyingCPP/Maps/FlyingExampleMap -Messaging -SessionId=04460765499DAE8D2B878AA563FA9C41 -SessionOwner="jay" -SessionName="Launch On Device" -iterative

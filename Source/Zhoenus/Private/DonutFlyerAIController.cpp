@@ -1,0 +1,300 @@
+// Copyright 2018 loadngo Games, All rights reserved
+
+#include "DonutFlyerAIController.h"
+#include "../DonutFlyerPawn.h"
+#include "../SpaceshipPawn.h"
+#include "Containers/Map.h"
+#include "GameFramework/PlayerController.h"
+#include "ZhoenusPlayerState.h"
+#include "Runtime/Engine/Classes/Engine/World.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LOG_TEST, Log, All);
+
+
+
+ADonutFlyerAIController::ADonutFlyerAIController()
+{
+	bIsPlayerController = false;
+}
+
+float ADonutFlyerAIController::playerTargetScore(APawn* pawn)
+{
+	auto ps = AggroMap.Find(pawn);
+	if (ps)
+	{
+		return CalcAggro(*ps);
+	}
+	return 0.f;
+}
+
+APawn* ADonutFlyerAIController::GetTargetPlayer()
+{
+	int playerCount{ 0 };
+	APawn* ret{ nullptr };
+	float max_score{ 0.0 };
+	TArray<APawn*> cleanup;
+	for (auto &elem : AggroMap) 
+	{
+		if (IsValid(elem.Key))
+		{
+			float s = CalcAggro(elem.Value);
+			if (s > max_score && !elem.Key->IsPendingKillPending())
+			{
+				ret = elem.Key;
+				max_score = s;
+			}
+			//UE_LOG(LOG_TEST, Warning, TEXT("Player #: %d, shoot: %d, hit: %d, score: %f, max_score: %f"), playerCount+1, ps->Shoot, ps->Hit, s, max_score);
+			++playerCount;
+		}
+		else
+		{
+			cleanup.Add(elem.Key);
+		}
+	}
+	//wipe out any invalid pawns
+	if (cleanup.Num())
+	{
+		for (auto& p : cleanup)
+		{
+			AggroMap.Remove(p);
+		}
+	}
+	// update target player's status.
+	for (FConstPlayerControllerIterator it = GetWorld()->GetPlayerControllerIterator(); it; it++)
+	{
+		APlayerController* pc = it->Get();
+		if(auto pawn = Cast<ASpaceshipPawn>(pc->GetPawn()))
+		{
+			pawn->IsDonutTarget = pawn == ret;
+		}
+	}
+	
+	//if (GEngine) {
+	//	GEngine->AddOnScreenDebugMessage(1, 15.0f, FColor::White, FString::Printf(TEXT("Player Number: %d"), playerCount));
+	//}
+	//UE_LOG(LOG_TEST, Warning, TEXT("Total Player Number: %d"), playerCount);
+	return ret;
+}
+
+APawn* ADonutFlyerAIController::GetTargetPlayer(TArray<APawn *> players)
+{
+	APawn* ret{ nullptr };
+	float max_score{ 0.0 };
+	for (APawn* pawn : players) {
+		float s = this->playerTargetScore(pawn);
+		if (s > max_score) {
+			ret = pawn;
+			max_score = s;
+		}
+//		UE_LOG(LOG_TEST, Warning, TEXT("Player #: %d, shoot: %d, hit: %d, score: %f, max_score: %f"), playerCount+1, ps->Shoot, ps->Hit, s, max_score);
+	}
+	return ret;
+}
+
+static void ReduceAggro(float& Aggro, float PercentDecrease, float DeltaSeconds)
+{
+	Aggro = FMath::Max(0.f, Aggro - (Aggro * PercentDecrease * DeltaSeconds));
+}
+
+void ADonutFlyerAIController::Tick(float deltaSeconds)
+{
+	Super::Tick(deltaSeconds);
+	ADonutFlyerPawn* pawn{ Cast<ADonutFlyerPawn>(GetPawn()) };
+	if (GEngine) {
+		GEngine->AddOnScreenDebugMessage(4, 15.0f, FColor::White, FString::Printf(TEXT("DonutFlyer: Current State: %d"), currentState));
+	}
+	switch (currentState)
+	{
+	case IDLE:
+		if (deltaSeconds - currentStateEntered > 2 * 1 / 60)
+		{
+			currentState = SEARCHING;
+			currentStateEntered = deltaSeconds;
+			//UE_LOG(LOG_TEST, Log, TEXT("Idle switch to searching"));
+		}
+		break;
+	case SEARCHING:
+		{
+			FVector Start{ pawn->GetActorLocation() };
+			//FVector End{ Start.X + 1};
+			FCollisionQueryParams CollisionParams;
+			//CollisionParams.AddIgnoredActor(target);
+			CollisionParams.AddIgnoredActor(pawn);
+			TArray<FOverlapResult> overlaps;
+			TArray<APawn *> candidates{};
+			if (GetWorld()->OverlapMultiByChannel(overlaps, Start, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(SearchDistance), CollisionParams))
+			{
+				//for now we take the first Zhoenus Pawn we find... 
+				for(auto &ov : overlaps)
+				{
+					if (ov.GetActor()->IsA<ASpaceshipPawn>())
+					{
+						FHitResult hit{};
+						//TODO: make a series of line traces (in case target is partially visible)
+						if (GetWorld()->LineTraceSingleByChannel(hit, Start, ov.GetActor()->GetActorLocation(), ECC_WorldDynamic, CollisionParams))
+						{
+							if (auto ZhoenusPawn = Cast<ASpaceshipPawn>(hit.GetActor()))
+							{
+								auto &ps = AggroMap.FindOrAdd(ZhoenusPawn);
+								ps.SeenAggro += 3.f + ((SearchDistance - hit.Distance) / SearchDistance);
+								//UE_LOG(LOG_TEST, Log, TEXT("Seen player: %g - %g - %g, %s"), ps.BumpAggro, ps.ShotAggro, ps.SeenAggro, *pc.GetName());
+								candidates.Push(ZhoenusPawn);
+							}
+						}
+					}
+				}
+				if (GetTargetPlayer(candidates))
+				{
+					currentState = CHASING;
+					currentStateEntered = deltaSeconds;
+					//UE_LOG(LOG_TEST, Log, TEXT("Searching switch to chasing"));
+				}
+				//TODO: add ROAMING state and after a certain period of failed searching being to roam....
+			}
+		}
+		break;
+	case CHASING:
+		if (APawn *target = GetTargetPlayer())
+		{
+			pawn->DisengageAutoCorrect(0.0f);
+			FVector Start{ pawn->GetActorLocation() };
+			FVector ForwardVector{ pawn->GetActorForwardVector() };
+			FVector End{ ((ForwardVector * 450.f) + Start) };
+			FCollisionQueryParams CollisionParams;
+			//CollisionParams.AddIgnoredActor(target);
+			CollisionParams.AddIgnoredActor(pawn);
+			FHitResult OutHit;
+			if (pawn->GetDistanceTo(target) < 300.f)
+			{
+				pawn->ThrustInput(0.0f);
+				currentState = HOVERING;
+				currentStateEntered = deltaSeconds;
+				//UE_LOG(LOG_TEST, Log, TEXT("Chasing switch to hovering 1"));
+			}
+			else if (GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECC_WorldDynamic, CollisionParams))
+			{
+				pawn->ThrustInput(0.0f);
+				if (Cast<APawn>(OutHit.GetActor()) == target)
+				{
+					currentState = HOVERING;
+					currentStateEntered = deltaSeconds;
+					//UE_LOG(LOG_TEST, Log, TEXT("Chasing switch to hovering 2"));
+				}
+				else if (deltaSeconds - currentStateEntered > 2.f)
+				{
+					currentState = STUCK;
+					currentStateEntered = deltaSeconds;
+					AActor* a{ OutHit.GetActor() };
+					//UE_LOG(LOG_TEST, Log, TEXT("Chasing switch to stuck: %s"), a ? *a->GetName() : TEXT("nullptr"));
+				}
+			}
+			else
+			{
+				// - is forward + is back
+				pawn->ThrustInput(-0.05f);
+			}
+			FVector targetLoc{ target->GetActorLocation() };
+			pawn->TargetRot = (targetLoc - Start).Rotation();
+		}
+		else
+		{
+			currentState = SEARCHING;
+			currentStateEntered = deltaSeconds;
+			//UE_LOG(LOG_TEST, Log, TEXT("Chasing switch to searching"));
+		}
+		break;
+	case HOVERING:
+		if (APawn* target = GetTargetPlayer())
+		{
+			FVector Start{ pawn->GetActorLocation() };
+			FVector ForwardVector{ pawn->GetActorForwardVector() };
+			FVector End{ Start + (ForwardVector * 200.f) };
+			FCollisionQueryParams CollisionParams;
+			//CollisionParams.AddIgnoredActor(target);
+			CollisionParams.AddIgnoredActor(pawn);
+			FHitResult OutHit;
+			GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECC_WorldDynamic, CollisionParams);
+			if (Cast<APawn>(OutHit.GetActor()) != target)
+			{
+				currentState = CHASING;
+				currentStateEntered = deltaSeconds;
+				AActor* a{ OutHit.GetActor() };
+				//UE_LOG(LOG_TEST, Log, TEXT("Hovering switch to chasing: %s"), a ? *a->GetName() : TEXT("nullptr"));
+			}
+			else if (pawn->GetDistanceTo(target) < 300.f)
+			{
+				pawn->DisengageAutoCorrect(10.0f);
+			}
+			else 
+			{
+				pawn->DisengageAutoCorrect(0.0f);
+			}
+			FVector targetLoc{ target->GetActorLocation() };
+			pawn->TargetRot = (targetLoc - Start).Rotation();
+		}
+		else
+		{
+			currentState = SEARCHING;
+			currentStateEntered = deltaSeconds;
+			//UE_LOG(LOG_TEST, Log, TEXT("Hovering switch to searching"));
+		}
+		break;
+	case STUCK:
+		//the donutflyer can not reach the target.. because of some obstacle..
+		//this may be because a player is under the "floor" for example
+		//in this case we want the donutflyer to attempt to find a path to the player..
+		//but for now for simplicity we may just accelerate aggro depletion
+		if (APawn* target = GetTargetPlayer())
+		{
+			FVector Start{ pawn->GetActorLocation() };
+			FVector TargetVector{ target->GetActorLocation() - Start };
+			FVector End{ Start + (TargetVector.Rotation().Quaternion().Vector() * SearchDistance) };
+			FCollisionQueryParams CollisionParams;
+			//CollisionParams.AddIgnoredActor(target);
+			CollisionParams.AddIgnoredActor(pawn);
+			FHitResult OutHit;
+			GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECC_WorldDynamic, CollisionParams);
+			if (Cast<APawn>(OutHit.GetActor()) != target)
+			{
+				if (APlayerController* pc = target->GetController<APlayerController>())
+				{
+					if (auto ps = pc->GetPlayerState<AZhoenusPlayerState>())
+					{
+						ReduceAggro(ps->BumpAggro, 0.0542f, deltaSeconds);
+						ReduceAggro(ps->ShotAggro, 0.0542f, deltaSeconds);
+						ReduceAggro(ps->SeenAggro, 0.0542f, deltaSeconds);
+					}
+				}
+			}
+			else
+			{
+				currentState = CHASING;
+				currentStateEntered = deltaSeconds;
+				UE_LOG(LOG_TEST, Log, TEXT("Stuck switch to chasing"));
+			}
+		}
+		else
+		{
+			currentState = SEARCHING;
+			currentStateEntered = deltaSeconds;
+			UE_LOG(LOG_TEST, Log, TEXT("Stuck switch to searching"));
+		}
+	}
+	DecreaseAggro(deltaSeconds);
+}
+
+
+
+void ADonutFlyerAIController::DecreaseAggro(float DeltaSeconds)
+{
+	for (auto &aggro : AggroMap)
+	{
+		if (CalcAggro(aggro.Value) > 0.f)
+		{
+			ReduceAggro(aggro.Value.BumpAggro, 0.0231f, DeltaSeconds);
+			ReduceAggro(aggro.Value.ShotAggro, 0.0456f, DeltaSeconds);
+			ReduceAggro(aggro.Value.SeenAggro, 0.00931f, DeltaSeconds);
+		}
+	}
+}
+

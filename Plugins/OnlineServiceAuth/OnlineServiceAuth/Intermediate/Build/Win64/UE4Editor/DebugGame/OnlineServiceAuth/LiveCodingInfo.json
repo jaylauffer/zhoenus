@@ -1,0 +1,13 @@
+{
+	"RemapUnityFiles": 
+	{
+		"Module.OnlineServiceAuth.cpp.obj": [
+			"OnlineServiceAuth.cpp.obj",
+			"OnlineServiceAuthBPLibrary.cpp.obj"
+		],
+		"Module.OnlineServiceAuth.gen.cpp.obj": [
+			"OnlineServiceAuth.init.gen.cpp.obj",
+			"OnlineServiceAuthBPLibrary.gen.cpp.obj"
+		]
+	}
+}

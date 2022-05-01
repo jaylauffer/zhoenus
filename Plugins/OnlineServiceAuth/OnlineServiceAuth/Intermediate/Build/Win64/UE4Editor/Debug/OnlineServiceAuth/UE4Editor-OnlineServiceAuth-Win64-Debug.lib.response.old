@@ -1,0 +1,14 @@
+/NOLOGO
+/errorReport:prompt
+/MACHINE:x64
+/SUBSYSTEM:WINDOWS
+/DEF
+/NAME:"UE4Editor-OnlineServiceAuth-Win64-Debug.dll"
+/IGNORE:4221
+/NODEFAULTLIB
+"D:\zhoenus-gamejam\unreal\Engine\Intermediate\Build\Win64\UE4Editor\Debug\UnrealEd\SharedPCH.UnrealEd.ShadowErrors.h.obj"
+"D:\zhoenus-gamejam\unreal\Zhoenus\Plugins\OnlineServiceAuth\OnlineServiceAuth\Intermediate\Build\Win64\UE4Editor\Debug\OnlineServiceAuth\Module.OnlineServiceAuth.cpp.obj"
+"D:\zhoenus-gamejam\unreal\Zhoenus\Plugins\OnlineServiceAuth\OnlineServiceAuth\Intermediate\Build\Win64\UE4Editor\Debug\OnlineServiceAuth\Module.OnlineServiceAuth.gen.cpp.obj"
+"D:\zhoenus-gamejam\unreal\Engine\Intermediate\Build\Win64\UE4Editor\Debug\Default.rc2.res"
+/OUT:"D:\zhoenus-gamejam\unreal\Zhoenus\Plugins\OnlineServiceAuth\OnlineServiceAuth\Intermediate\Build\Win64\UE4Editor\Debug\OnlineServiceAuth\UE4Editor-OnlineServiceAuth-Win64-Debug.lib"
+/INCLUDE:IMPLEMENT_MODULE_OnlineServiceAuth
