@@ -5,6 +5,7 @@
 #include "ZhoenusPlayerController.h"
 #include "ZhoenusPlayerState.h"
 #include "ZhoenusPawn.h"
+#include "Goal.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogZhoenusSoccerGameMode, Log, All);
 
@@ -25,6 +26,11 @@ void AZhoenusSoccerGameMode::IncrementScore(int32 index, int32 amount)
 	{
 		state->Score[index] += amount;
 	}
+}
+
+void AZhoenusSoccerGameMode::Score(AGoal* goal, APawn* player, APawn* ball)
+{
+	IncrementScore(goal->team, 1);
 }
 
 void AZhoenusSoccerGameMode::ClearAfterGoal()
