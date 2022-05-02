@@ -14,6 +14,7 @@ class ASaveThemAllGameMode : public AZhoenusGameMode
 public:
 	ASaveThemAllGameMode();
 
+	virtual void BeginPlay() override;
 	virtual void Score(AGoal *goal, APawn *player, APawn *ball) override;
 };
 

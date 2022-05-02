@@ -26,7 +26,7 @@ void AGoal::BeginPlay()
 
 void AGoal::OnGoal(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool fromSweep, const FHitResult& sweepResult)
 {
-	if (GetNetMode() < NM_Client)
+	if (GetNetMode() != NM_Client)
 	{
 		ADonutFlyerPawn* donut{ Cast<ADonutFlyerPawn>(otherActor) };
 		if (donut)
