@@ -29,7 +29,7 @@ void ASaveThemAllGameMode::BeginPlay()
 
 	UWorld* w{ GetWorld() };
 	//FBox box{ALevelBounds::CalculateLevelBounds(w->GetCurrentLevel())};
-	FBox box{ FVector{-8000, -8000, 100}, FVector{8000, 8000, 8000} };
+	FBox box{ FVector{-18000, -18000, 100}, FVector{18000, 18000, 12000} };
 	for (int i = 0; i < 100; ++i)
 	{
 		FVector spawn{ FMath::RandPointInBox(box) };
@@ -41,5 +41,8 @@ void ASaveThemAllGameMode::BeginPlay()
 void ASaveThemAllGameMode::Score(AGoal* goal, APawn* player, APawn* ball)
 {
 	++GetGameState<ASaveThemAllGameState>()->Saved;
+	ASpaceshipPawn* spaceship{ Cast<ASpaceshipPawn>(player) };
+	spaceship->MaxSpeed += 5.f;
+	spaceship->MinSpeed -= 2.f;
 	ball->Destroy();
 }
