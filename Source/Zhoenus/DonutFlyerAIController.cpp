@@ -100,9 +100,9 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 {
 	Super::Tick(deltaSeconds);
 	ADonutFlyerPawn* pawn{ Cast<ADonutFlyerPawn>(GetPawn()) };
-	if (GEngine) {
-		GEngine->AddOnScreenDebugMessage(4, 15.0f, FColor::White, FString::Printf(TEXT("DonutFlyer: Current State: %d"), currentState));
-	}
+	//if (GEngine) {
+	//	GEngine->AddOnScreenDebugMessage(4, 15.0f, FColor::White, FString::Printf(TEXT("DonutFlyer: Current State: %d"), currentState));
+	//}
 	switch (currentState)
 	{
 	case IDLE:
