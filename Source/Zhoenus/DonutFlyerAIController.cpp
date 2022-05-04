@@ -1,8 +1,8 @@
 // Copyright 2018 loadngo Games, All rights reserved
 
 #include "DonutFlyerAIController.h"
-#include "../DonutFlyerPawn.h"
-#include "../SpaceshipPawn.h"
+#include "DonutFlyerPawn.h"
+#include "SpaceshipPawn.h"
 #include "Containers/Map.h"
 #include "GameFramework/PlayerController.h"
 #include "ZhoenusPlayerState.h"
