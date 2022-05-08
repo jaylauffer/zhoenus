@@ -38,9 +38,6 @@ ASpaceshipPawn::ASpaceshipPawn(const FObjectInitializer &initializer)
 	PlaneMesh->BodyInstance.bEnableGravity = false;
 	RootComponent = PlaneMesh;
 
-	const FName Name_FlyingMovementComponent(TEXT("ZhoenusMovementComponent"));
-	FlyingMovementComponent = CreateDefaultSubobject<UZhoenusMovementComponent>(Name_FlyingMovementComponent);
-
 	// Cache our sound effect
 	static ConstructorHelpers::FObjectFinder<USoundBase> FireAudio(TEXT("/Game/Flying/Audio/TwinStickFire.TwinStickFire"));
 	FireSound = FireAudio.Object;
@@ -53,7 +50,13 @@ ASpaceshipPawn::ASpaceshipPawn(const FObjectInitializer &initializer)
 	MinSpeed = -1000.f;
 	CurrentForwardSpeed = 0.f;
 
-	FlyingMovementComponent->SetMaxMoveSpeed(MaxSpeed);
+	if (GetNetMode() != NM_Standalone)
+	{
+		const FName Name_FlyingMovementComponent(TEXT("ZhoenusMovementComponent"));
+		FlyingMovementComponent = CreateDefaultSubobject<UZhoenusMovementComponent>(Name_FlyingMovementComponent);
+		FlyingMovementComponent->SetMaxMoveSpeed(MaxSpeed);
+	}
+
 
 	CurrentRateOfFire = 0.f;
 	GunOffset = FVector{ 90.f, 0.f, 10.f };
@@ -78,7 +81,7 @@ void ASpaceshipPawn::BeginPlay()
 	//UE_LOG(LogSpaceshipPawn, Log, TEXT("Begin play %s - location: %s rotation: %s quat: %s"), IsNetMode(NM_Client) ? TEXT("client") : TEXT("server"), *GetActorLocation().ToString(), *GetActorRotation().ToString(), *GetActorQuat().ToString());
 	if (UWorld* World = GetWorld())
 	{
-		if (ensure(FlyingMovementComponent))
+		if (GetNetMode() != NM_Standalone && ensure(FlyingMovementComponent))
 		{
 			FlyingMovementComponent->ProduceInputDelegate.BindUObject(this, &ASpaceshipPawn::ProduceInput);
 		}
@@ -89,7 +92,41 @@ void ASpaceshipPawn::Tick(float DeltaSeconds)
 {
 	// Call any parent class Tick implementation
 	Super::Tick(DeltaSeconds);
+	if (GetNetMode() == NM_Standalone)
+	{
+		double& Thrust{ CachedInput.W };
+		bool bHasInput = !FMath::IsNearlyEqual(Thrust, 0.f);
+		CurrentAcceleration = bHasInput ? (Thrust * Acceleration * -1.f) : (CurrentForwardSpeed < 0.0 ? 0.5f * Acceleration : -0.5f * Acceleration);
+		CurrentForwardSpeed += CurrentAcceleration * DeltaSeconds;
+		CurrentForwardSpeed = FMath::Clamp(CurrentForwardSpeed, MinSpeed, MaxSpeed);
+		const FVector LocalMove = FVector(CurrentForwardSpeed * DeltaSeconds, 0.f, 0.f);
+		
+		// Move plane forwards (with sweep so we stop when we collide with things)
+		AddActorLocalOffset(LocalMove, true);
+		
+		// Calculate change in rotation this frame
+		double& Pitch{ CachedInput.X };
+		double& Yaw{ CachedInput.Y };
+		double& Roll{ CachedInput.Z };
 
+		const bool PitchInput = FMath::Abs(Pitch) > 0.2f;
+		TargetPitchSpeed = PitchInput ? (Pitch * TurnSpeed * -1.f) : (GetActorRotation().Pitch * -1.5f * AutoCorrectRate);
+		CurrentPitchSpeed = FMath::FInterpTo(CurrentPitchSpeed, TargetPitchSpeed, DeltaSeconds, 2.f);
+
+		const bool YawInput = FMath::Abs(Yaw) > 0.2f;
+		TargetYawSpeed = YawInput ? (Yaw * TurnSpeed) : 0.f;
+		CurrentYawSpeed = FMath::FInterpTo(CurrentYawSpeed, TargetYawSpeed, DeltaSeconds, 2.f);
+		
+		const bool RollInput = FMath::Abs(Roll) > 0.2f;
+		TargetRollSpeed = RollInput ? (Roll * RollSpeed) : (GetActorRotation().Roll * -1.5f * AutoCorrectRate);
+		CurrentRollSpeed = FMath::FInterpTo(CurrentRollSpeed, TargetRollSpeed, DeltaSeconds, 2.f);
+
+		FRotator DeltaRotation(0, 0, 0);
+		DeltaRotation.Pitch = CurrentPitchSpeed * DeltaSeconds;
+		DeltaRotation.Yaw = CurrentYawSpeed * DeltaSeconds;
+		DeltaRotation.Roll = CurrentRollSpeed * DeltaSeconds;
+		AddActorLocalRotation(DeltaRotation.Quaternion());
+	}
 	FireShot();
 }
 
@@ -135,13 +172,13 @@ void ASpaceshipPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 
 void ASpaceshipPawn::ThrustInput(float Val)
 {
-	CachedInput.W = FMath::Clamp(Val * -1.f, -1.f, 1.f);
+	CachedInput.W = FMath::Clamp(Val * 1.f, -1.f, 1.f);
 }
 
 void ASpaceshipPawn::MoveUpInput(float Val)
 {
 	//Pitch
-	CachedInput.X = FMath::Clamp(Val * -1.f, -1.f, 1.f);
+	CachedInput.X = FMath::Clamp(Val * 1.f, -1.f, 1.f);
 	// Is there any updown input?
 
 }

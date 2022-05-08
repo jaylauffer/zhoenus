@@ -27,15 +27,15 @@ void ASaveThemAllGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UWorld* w{ GetWorld() };
-	//FBox box{ALevelBounds::CalculateLevelBounds(w->GetCurrentLevel())};
-	FBox box{ FVector{-18000, -18000, 100}, FVector{18000, 18000, 12000} };
-	for (int i = 0; i < 100; ++i)
-	{
-		FVector spawn{ FMath::RandPointInBox(box) };
-		FRotator rot{ };
-		w->SpawnActor<ADonutFlyerPawn>(spawn, rot);
-	}
+	//UWorld* w{ GetWorld() };
+	////FBox box{ALevelBounds::CalculateLevelBounds(w->GetCurrentLevel())};
+	//FBox box{ FVector{-18000, -18000, 100}, FVector{18000, 18000, 12000} };
+	//for (int i = 0; i < 100; ++i)
+	//{
+	//	FVector spawn{ FMath::RandPointInBox(box) };
+	//	FRotator rot{ };
+	//	w->SpawnActor<ADonutFlyerPawn>(spawn, rot);
+	//}
 }
 
 void ASaveThemAllGameMode::Score(AGoal* goal, APawn* player, APawn* ball)
