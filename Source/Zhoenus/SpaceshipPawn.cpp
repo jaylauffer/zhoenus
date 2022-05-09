@@ -172,13 +172,13 @@ void ASpaceshipPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 
 void ASpaceshipPawn::ThrustInput(float Val)
 {
-	CachedInput.W = FMath::Clamp(Val * 1.f, -1.f, 1.f);
+	CachedInput.W = FMath::Clamp(Val, -1.f, 1.f);
 }
 
 void ASpaceshipPawn::MoveUpInput(float Val)
 {
 	//Pitch
-	CachedInput.X = FMath::Clamp(Val * 1.f, -1.f, 1.f);
+	CachedInput.X = FMath::Clamp(Val, -1.f, 1.f);
 	// Is there any updown input?
 
 }

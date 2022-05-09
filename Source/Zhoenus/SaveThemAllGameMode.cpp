@@ -7,6 +7,7 @@
 #include "ZhoenusPawn.h"
 #include "DonutFlyerPawn.h"
 #include "Goal.h"
+#include "SpaceshipHUD.h"
 #include "Math/UnrealMathUtility.h"
 #include "CoreFwd.h"
 #include "Engine/LevelBounds.h"
@@ -21,6 +22,7 @@ ASaveThemAllGameMode::ASaveThemAllGameMode()
 	DefaultPawnClass = AZhoenusPawn::StaticClass();
 	PlayerStateClass = AZhoenusPlayerState::StaticClass();
 	GameStateClass = ASaveThemAllGameState::StaticClass();
+	HUDClass = ASpaceshipHUD::StaticClass();
 }
 
 void ASaveThemAllGameMode::BeginPlay()
