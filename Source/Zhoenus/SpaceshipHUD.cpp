@@ -49,6 +49,19 @@ void ASpaceshipHUD::DrawHUD()
 			FVector2D e{ 10.f, Speed / pawn->MinSpeed * Canvas->ClipY * .2f };
 			DrawRect(FLinearColor::Yellow, v.X, v.Y, e.X, e.Y);
 		}
+
+		v.X -= 10.f;
+		double Accel{ -pawn->CachedInput.W };
+		if (Accel > 0.02f)
+		{
+			FVector2D e{ 10.f, -Accel * Canvas->ClipY * .6f };
+			DrawRect(FLinearColor::Blue, v.X, v.Y, e.X, e.Y);
+		}
+		else if (Accel < -0.02f)
+		{
+			FVector2D e{ 10.f, -Accel * Canvas->ClipY * .2f };
+			DrawRect(FLinearColor::Green, v.X, v.Y, e.X, e.Y);
+		}
 	}
 	
 

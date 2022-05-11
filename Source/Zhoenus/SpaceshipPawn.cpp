@@ -18,6 +18,14 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogSpaceshipPawn, Log, All);
 
+#define ON_SCREEN_DEBUG 1
+#ifdef ON_SCREEN_DEBUG
+#include <Runtime/Engine/Classes/Engine/Engine.h>
+#define ScreenDebug(text) if(GEngine)GEngine->AddOnScreenDebugMessage(-1, 1.5, FColor::White, text)
+#else
+#define ScreenDebug(text) 
+#endif
+
 ASpaceshipPawn::ASpaceshipPawn(const FObjectInitializer &initializer)
 {
 	// Structure to hold one-time initialization
@@ -172,12 +180,15 @@ void ASpaceshipPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 
 void ASpaceshipPawn::ThrustInput(float Val)
 {
+	//UE_LOG(LogSpaceshipPawn, Log, TEXT("Thrust %g"), Val);
+	//ScreenDebug(FString::Printf(TEXT("Thrust %g"), Val));
 	CachedInput.W = FMath::Clamp(Val, -1.f, 1.f);
 }
 
 void ASpaceshipPawn::MoveUpInput(float Val)
 {
 	//Pitch
+	//ScreenDebug(FString::Printf(TEXT("Pitch %g"), Val));
 	CachedInput.X = FMath::Clamp(Val, -1.f, 1.f);
 	// Is there any updown input?
 
@@ -186,6 +197,7 @@ void ASpaceshipPawn::MoveUpInput(float Val)
 void ASpaceshipPawn::MoveRightInput(float Val)
 {
 	//Yaw
+	//ScreenDebug(FString::Printf(TEXT("Yaw %g"), Val));
 	CachedInput.Y = FMath::Clamp(Val, -1.f, 1.f);
 	// Is there any left/right input?
 
@@ -194,6 +206,7 @@ void ASpaceshipPawn::MoveRightInput(float Val)
 void ASpaceshipPawn::RotateRightInput(float Val)
 {
 	//Roll
+	//ScreenDebug(FString::Printf(TEXT("Roll %g"), Val));
 	CachedInput.Z = FMath::Clamp(Val, -1.f, 1.f);
 }
 

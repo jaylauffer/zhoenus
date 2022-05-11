@@ -62,20 +62,12 @@ private:
 	UPROPERTY(Category = Movement, VisibleAnywhere)
 	UZhoenusMovementComponent* FlyingMovementComponent;
 
-	FQuat CachedInput;
-	//float CachedThrustInput;
-	//FVector CachedRotationInput;
-
 	bool bCanFire;
 	FVector GunOffset;
 	void FireShot();
 	void ShotTimerExpired();
 	/** Handle for efficient management of ShotTimerExpired timer */
 	FTimerHandle TimerHandle_ShotTimerExpired;
-
-	/** How quickly forward speed changes */
-	UPROPERTY(Category=Plane, EditAnywhere)
-	float Acceleration;
 
 	/** How quickly pawn can steer */
 	UPROPERTY(Category=Plane, EditAnywhere)
@@ -85,6 +77,12 @@ private:
 	float RollSpeed;
 
 public:
+	FQuat CachedInput;
+
+	/** How quickly forward speed changes */
+	UPROPERTY(Category = Plane, EditAnywhere)
+	float Acceleration;
+
 	/** Max forward speed */
 	UPROPERTY(Category = Pitch, EditAnywhere, BlueprintReadOnly)
 		float MaxSpeed;
