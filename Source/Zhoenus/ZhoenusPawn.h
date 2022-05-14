@@ -24,9 +24,15 @@ class AZhoenusPawn : public ASpaceshipPawn
 	UPROPERTY(Category = Lights, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	class USpotLightComponent* HeadLight;
 
+	UPROPERTY(Category = Thrusters, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	class UNiagaraComponent* LeftThruster;
+
+	UPROPERTY(Category = Thrusters, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	class UNiagaraComponent* RightThruster;
+
 public:
 	AZhoenusPawn(const FObjectInitializer &initializer);
-
+	virtual void BeginPlay() override;
 private:
 
 public:
