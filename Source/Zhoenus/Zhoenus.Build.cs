@@ -8,6 +8,6 @@ public class Zhoenus : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "EngineSettings", "InputCore", "UMG", "Slate", "SlateCore", "ReplicationGraph", "NetworkPrediction" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "EngineSettings", "InputCore", "UMG", "Slate", "SlateCore", "Niagara", "ReplicationGraph", "NetworkPrediction" });
 	}
 }
