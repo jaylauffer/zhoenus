@@ -18,6 +18,10 @@ public:
 
 	UPROPERTY(Replicated, BlueprintReadWrite)
 	int32 Saved;
+
+	UPROPERTY(Replicated, BlueprintReadWrite)
+	int32 Total;
+
 };
 
 

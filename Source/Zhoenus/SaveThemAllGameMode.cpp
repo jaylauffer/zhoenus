@@ -6,8 +6,10 @@
 #include "ZhoenusPlayerState.h"
 #include "ZhoenusPawn.h"
 #include "DonutFlyerPawn.h"
+#include "DonutFlyerSpawner.h"
 #include "Goal.h"
 #include "SpaceshipHUD.h"
+#include "EngineUtils.h"
 #include "Math/UnrealMathUtility.h"
 #include "CoreFwd.h"
 #include "Engine/LevelBounds.h"
@@ -29,7 +31,12 @@ void ASaveThemAllGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	//UWorld* w{ GetWorld() };
+	UWorld* w{ GetWorld() };
+	ASaveThemAllGameState* state{ GetGameState<ASaveThemAllGameState>() };
+	for (TActorIterator<ADonutFlyerSpawner> ActorItr{ w }; ActorItr; ++ActorItr)
+	{
+		state->Total += ActorItr->SpawnAmount;
+	}
 	////FBox box{ALevelBounds::CalculateLevelBounds(w->GetCurrentLevel())};
 	//FBox box{ FVector{-18000, -18000, 100}, FVector{18000, 18000, 12000} };
 	//for (int i = 0; i < 100; ++i)

@@ -3,7 +3,7 @@
 #include "SaveThemAllGameState.h"
 #include "Net/UnrealNetwork.h"
 
-ASaveThemAllGameState::ASaveThemAllGameState() : Saved{0}
+ASaveThemAllGameState::ASaveThemAllGameState() : Saved{ 0 }, Total{ 0 }
 {
 }
 
@@ -12,4 +12,5 @@ void ASaveThemAllGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ThisClass, Saved);
+	DOREPLIFETIME(ThisClass, Total);
 }
