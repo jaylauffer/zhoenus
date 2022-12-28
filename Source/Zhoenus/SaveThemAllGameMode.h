@@ -7,6 +7,7 @@
 #include "SaveThemAllGameMode.generated.h"
 
 class USoundBase;
+class UNiagaraSystem;
 
 UCLASS(MinimalAPI)
 class ASaveThemAllGameMode : public AZhoenusGameMode
@@ -22,6 +23,8 @@ public:
 	UFUNCTION()
 	virtual void OnSongFinished();
 
+
+	UNiagaraSystem* disintegrate;
 	USoundBase *song;
 };
 

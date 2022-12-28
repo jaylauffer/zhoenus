@@ -16,6 +16,11 @@
 #include "Engine/LevelBounds.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraCommon.h"
+#include "NiagaraComponent.h"
+#include "NiagaraComponentSettings.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogSaveThemAllGameMode, Log, All);
 
@@ -43,6 +48,8 @@ void ASaveThemAllGameMode::BeginPlay()
 	Super::BeginPlay();
 
 	UWorld* w{ GetWorld() };
+
+	disintegrate = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/Effects/DonutDissolve.DonutDissolve"), nullptr, LOAD_None, nullptr);
 	ASaveThemAllGameState* state{ GetGameState<ASaveThemAllGameState>() };
 	for (TActorIterator<ADonutFlyerSpawner> ActorItr{ w }; ActorItr; ++ActorItr)
 	{
@@ -69,7 +76,10 @@ void ASaveThemAllGameMode::Score(AGoal* goal, APawn* player, APawn* ball)
 {
 	++GetGameState<ASaveThemAllGameState>()->Saved;
 	ASpaceshipPawn* spaceship{ Cast<ASpaceshipPawn>(player) };
+	ADonutFlyerPawn* donut{ Cast<ADonutFlyerPawn>(ball) };
 	spaceship->MaxSpeed += 5.f;
 	spaceship->MinSpeed -= 2.f;
+	UNiagaraComponent* nc{ UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), disintegrate, ball->GetActorLocation(), ball->GetActorRotation(), ball->GetActorScale()) };
+	nc->SetVariableStaticMesh("StativcMesh", donut->GetPlaneMesh()->GetStaticMesh());
 	ball->Destroy();
 }
