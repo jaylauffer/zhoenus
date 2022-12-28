@@ -86,6 +86,7 @@ void ASpaceshipPawn::BeginPlay()
 {
 	Super::BeginPlay();
 	CachedInput = FQuat::Identity;
+	CachedInput.W = 0.f;
 	//UE_LOG(LogSpaceshipPawn, Log, TEXT("Begin play %s - location: %s rotation: %s quat: %s"), IsNetMode(NM_Client) ? TEXT("client") : TEXT("server"), *GetActorLocation().ToString(), *GetActorRotation().ToString(), *GetActorQuat().ToString());
 	if (UWorld* World = GetWorld())
 	{
@@ -146,9 +147,9 @@ void ASpaceshipPawn::NotifyHit(class UPrimitiveComponent* MyComp, class AActor* 
 	if(OtherComp && OtherComp->IsSimulatingPhysics())
 	{
 		//TODO: add condition for hitting opposite team
-		FVector push{ GetActorRotation().Quaternion().Vector() * GetVelocity().Size() * PlaneMesh->GetMass() };
+		FVector push{ GetActorRotation().Quaternion().Vector() * CurrentForwardSpeed * PlaneMesh->GetMass() };
 		OtherComp->AddForceAtLocation(push, HitLocation);
-//		UE_LOG(LogSpaceshipPawn, Log, TEXT("Collision - other: %s .. me: %s -- push %s - %g %g"), Other?*Other->GetName():TEXT("--unknown--"), *GetName(), *push.ToString(), GetVelocity().Size(), PlaneMesh->GetMass());
+		UE_LOG(LogSpaceshipPawn, Log, TEXT("Collision - other: %s .. me: %s -- push %s - %g %g"), Other?*Other->GetName():TEXT("--unknown--"), *GetName(), *push.ToString(), CurrentForwardSpeed, PlaneMesh->GetMass());
 	}
 	else
 	{

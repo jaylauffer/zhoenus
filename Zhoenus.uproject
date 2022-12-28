@@ -119,6 +119,8 @@
 		"WindowsNoEditor",
 		"Windows",
 		"Mac",
-		"HoloLens"
+		"HoloLens",
+		"Linux",
+		"LinuxArm64"
 	]
 }

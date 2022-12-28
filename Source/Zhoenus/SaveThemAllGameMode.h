@@ -6,6 +6,8 @@
 #include "ZhoenusGameMode.h"
 #include "SaveThemAllGameMode.generated.h"
 
+class USoundBase;
+
 UCLASS(MinimalAPI)
 class ASaveThemAllGameMode : public AZhoenusGameMode
 {
@@ -16,6 +18,11 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void Score(AGoal *goal, APawn *player, APawn *ball) override;
+
+	UFUNCTION()
+	virtual void OnSongFinished();
+
+	USoundBase *song;
 };
 
 

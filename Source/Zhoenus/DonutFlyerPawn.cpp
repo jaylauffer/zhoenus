@@ -37,8 +37,8 @@ ADonutFlyerPawn::ADonutFlyerPawn()
 	PlaneMesh->SetStaticMesh(ConstructorStatics.PlaneMesh.Get());	// Set static mesh
 	PlaneMesh->BodyInstance.bSimulatePhysics = true;
 	PlaneMesh->BodyInstance.bEnableGravity = false;
-	PlaneMesh->SetAngularDamping(1.f);
-	PlaneMesh->SetLinearDamping(1.f);
+	//PlaneMesh->SetAngularDamping(1.f);
+	//PlaneMesh->SetLinearDamping(1.f);
 	RootComponent = PlaneMesh;
 
 	////Set AIController
@@ -74,8 +74,8 @@ void ADonutFlyerPawn::DisengageAutoCorrect(float Val)
 	}
 	else
 	{
-		GetPlaneMesh()->SetAngularDamping(20.f * Val);
-		GetPlaneMesh()->SetLinearDamping(20.f * Val);
+		GetPlaneMesh()->SetAngularDamping(2.f * Val);
+		GetPlaneMesh()->SetLinearDamping(2.f * Val);
 	}
 }
 
@@ -150,7 +150,7 @@ void ADonutFlyerPawn::NotifyHit(class UPrimitiveComponent* MyComp, class AActor*
 	//if (OtherComp->GetOwner()->IsRootComponentMovable())
 	if (OtherComp && OtherComp->IsSimulatingPhysics())
 	{
-		FVector push{ GetActorRotation().Quaternion().Vector() * GetVelocity().Size() * PlaneMesh->GetMass() };
+		FVector push{ GetActorRotation().Quaternion().Vector() * CurrentForwardSpeed * PlaneMesh->GetMass() };
 		OtherComp->AddForceAtLocation(push, HitLocation);
 
 		if (AZhoenusPawn* pawn = Cast<AZhoenusPawn>(Other))

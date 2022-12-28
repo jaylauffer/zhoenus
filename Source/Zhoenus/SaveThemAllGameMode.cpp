@@ -12,19 +12,30 @@
 #include "EngineUtils.h"
 #include "Math/UnrealMathUtility.h"
 #include "CoreFwd.h"
+#include "Components/AudioComponent.h"
 #include "Engine/LevelBounds.h"
 #include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogSaveThemAllGameMode, Log, All);
 
 ASaveThemAllGameMode::ASaveThemAllGameMode()
 {
+	{
+		static ConstructorHelpers::FObjectFinder<USoundBase> Song(TEXT("/Game/Sound/OdeToTS"));
+		if (Song.Object != nullptr)
+		{
+			song = Song.Object;
+		}
+	}
+
 	//PlayerControllerClass = AZhoenusPlayerController::StaticClass();
 	// set default pawn class to our flying pawn
 	DefaultPawnClass = AZhoenusPawn::StaticClass();
 	PlayerStateClass = AZhoenusPlayerState::StaticClass();
 	GameStateClass = ASaveThemAllGameState::StaticClass();
 	HUDClass = ASpaceshipHUD::StaticClass();
+
 }
 
 void ASaveThemAllGameMode::BeginPlay()
@@ -45,6 +56,13 @@ void ASaveThemAllGameMode::BeginPlay()
 	//	FRotator rot{ };
 	//	w->SpawnActor<ADonutFlyerPawn>(spawn, rot);
 	//}
+	UAudioComponent* bgm{ UGameplayStatics::SpawnSound2D(w, song) };
+	bgm->OnAudioFinished.AddDynamic(this, &ASaveThemAllGameMode::OnSongFinished);
+}
+
+void ASaveThemAllGameMode::OnSongFinished()
+{
+	UGameplayStatics::OpenLevel(GetWorld(), "PowerUp");
 }
 
 void ASaveThemAllGameMode::Score(AGoal* goal, APawn* player, APawn* ball)
