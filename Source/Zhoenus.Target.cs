@@ -9,7 +9,5 @@ public class ZhoenusTarget : TargetRules
 	{
 		Type = TargetType.Game;
 		ExtraModuleNames.Add("Zhoenus");
-		bCompileChaos = true; 
-		bUseChaos = true;
 	}
 }

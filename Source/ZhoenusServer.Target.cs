@@ -8,7 +8,5 @@ public class ZhoenusServerTarget : TargetRules
 	{
 		Type = TargetType.Server;
 		ExtraModuleNames.Add("Zhoenus");
-		bCompileChaos = true;
-		bUseChaos = true;
 	}
 }

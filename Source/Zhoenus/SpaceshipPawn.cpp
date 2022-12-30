@@ -16,6 +16,9 @@
 #include "TimerManager.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 
+//todo cleanup dependency on SaveThemAllGameInstance..
+#include "SaveThemAllGameInstance.h"
+
 DEFINE_LOG_CATEGORY_STATIC(LogSpaceshipPawn, Log, All);
 
 #define ON_SCREEN_DEBUG 1
@@ -54,6 +57,7 @@ ASpaceshipPawn::ASpaceshipPawn(const FObjectInitializer &initializer)
 	Acceleration = 500.f;
 	TurnSpeed = 50.f;
 	RollSpeed = 100.f;
+	PitchSpeed = 50.f;
 	MaxSpeed = 3000.f;
 	MinSpeed = -1000.f;
 	CurrentForwardSpeed = 0.f;
@@ -87,6 +91,19 @@ void ASpaceshipPawn::BeginPlay()
 	Super::BeginPlay();
 	CachedInput = FQuat::Identity;
 	CachedInput.W = 0.f;
+
+	// Set handling parameters
+	USaveThemAllGameInstance* gi{ Cast<USaveThemAllGameInstance>(GetGameInstance()) };
+	if (gi)
+	{
+		const FShipStats& stats{ gi->shipStats };
+		Acceleration = stats.ForwardAcceleration;
+		TurnSpeed = stats.YawAcceleration;
+		RollSpeed = stats.RollAcceleration;
+		PitchSpeed = stats.PitchAcceleration;
+		MaxSpeed = stats.MaxSpeed;
+		MinSpeed = stats.MinSpeed;
+	}
 	//UE_LOG(LogSpaceshipPawn, Log, TEXT("Begin play %s - location: %s rotation: %s quat: %s"), IsNetMode(NM_Client) ? TEXT("client") : TEXT("server"), *GetActorLocation().ToString(), *GetActorRotation().ToString(), *GetActorQuat().ToString());
 	if (UWorld* World = GetWorld())
 	{
@@ -119,7 +136,7 @@ void ASpaceshipPawn::Tick(float DeltaSeconds)
 		double& Roll{ CachedInput.Z };
 
 		const bool PitchInput = FMath::Abs(Pitch) > 0.2f;
-		TargetPitchSpeed = PitchInput ? (Pitch * TurnSpeed * -1.f) : (GetActorRotation().Pitch * -1.5f * AutoCorrectRate);
+		TargetPitchSpeed = PitchInput ? (Pitch * PitchSpeed * -1.f) : (GetActorRotation().Pitch * -1.5f * AutoCorrectRate);
 		CurrentPitchSpeed = FMath::FInterpTo(CurrentPitchSpeed, TargetPitchSpeed, DeltaSeconds, 2.f);
 
 		const bool YawInput = FMath::Abs(Yaw) > 0.2f;

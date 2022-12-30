@@ -18,11 +18,12 @@ public:
 	ASaveThemAllGameMode();
 
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void Score(AGoal *goal, APawn *player, APawn *ball) override;
+	
 
 	UFUNCTION()
 	virtual void OnSongFinished();
-
 
 	UNiagaraSystem* disintegrate;
 	USoundBase *song;

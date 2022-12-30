@@ -76,6 +76,9 @@ private:
 	UPROPERTY(Category = Plane, EditAnywhere)
 	float RollSpeed;
 
+	UPROPERTY(Category = Plane, EditAnywhere)
+	float PitchSpeed;
+
 public:
 	FQuat CachedInput;
 

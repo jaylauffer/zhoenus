@@ -2,7 +2,8 @@
 
 #include "SaveThemAllGameMode.h"
 #include "SaveThemAllGameState.h"
-#include "ZhoenusPlayerController.h"
+#include "SaveThemAllPlayerController.h"
+#include "SaveThemAllGameInstance.h"
 #include "ZhoenusPlayerState.h"
 #include "ZhoenusPawn.h"
 #include "DonutFlyerPawn.h"
@@ -22,19 +23,23 @@
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
 
+
+
 DEFINE_LOG_CATEGORY_STATIC(LogSaveThemAllGameMode, Log, All);
 
 ASaveThemAllGameMode::ASaveThemAllGameMode()
 {
 	{
-		static ConstructorHelpers::FObjectFinder<USoundBase> Song(TEXT("/Game/Sound/OdeToTS"));
+		static ConstructorHelpers::FObjectFinder<USoundBase> Song(TEXT("/Game/Sound/LevelSong"));
 		if (Song.Object != nullptr)
 		{
 			song = Song.Object;
+
 		}
+
 	}
 
-	//PlayerControllerClass = AZhoenusPlayerController::StaticClass();
+	PlayerControllerClass = ASaveThemAllPlayerController::StaticClass();
 	// set default pawn class to our flying pawn
 	DefaultPawnClass = AZhoenusPawn::StaticClass();
 	PlayerStateClass = AZhoenusPlayerState::StaticClass();
@@ -47,9 +52,15 @@ void ASaveThemAllGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
+#if WITH_EDITOR
+	auto gi{ GetGameInstance<USaveThemAllGameInstance>() };
+	gi->LoadGame("SaveSlot01", 0);
+#endif
+
 	UWorld* w{ GetWorld() };
 
 	disintegrate = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/Effects/DonutDissolve.DonutDissolve"), nullptr, LOAD_None, nullptr);
+
 	ASaveThemAllGameState* state{ GetGameState<ASaveThemAllGameState>() };
 	for (TActorIterator<ADonutFlyerSpawner> ActorItr{ w }; ActorItr; ++ActorItr)
 	{
@@ -63,8 +74,46 @@ void ASaveThemAllGameMode::BeginPlay()
 	//	FRotator rot{ };
 	//	w->SpawnActor<ADonutFlyerPawn>(spawn, rot);
 	//}
-	UAudioComponent* bgm{ UGameplayStatics::SpawnSound2D(w, song) };
-	bgm->OnAudioFinished.AddDynamic(this, &ASaveThemAllGameMode::OnSongFinished);
+
+	UAudioComponent* bgm{ UGameplayStatics::CreateSound2D(w, song) };
+	if (bgm)
+	{
+		int32 index{ FMath::RandHelper(5) };
+		bgm->SetIntParameter("WaveIndex", index);
+		bgm->OnAudioFinished.AddDynamic(this, &ASaveThemAllGameMode::OnSongFinished);
+		bgm->Play();
+	}
+}
+
+void ASaveThemAllGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	USaveThemAllGameInstance* gi{ GetGameInstance<USaveThemAllGameInstance>() };
+	ASaveThemAllGameState* gs{ GetGameState<ASaveThemAllGameState>() };
+	float newPoints{ 0.f };
+	if (gs->Saved < gs->Total)
+	{
+		float percentageSaved{ float(gs->Saved) / float(gs->Total) };
+		if (percentageSaved > 0.74f)
+		{
+			newPoints = float(gs->Saved) * 1.25f;
+		}
+		else if (percentageSaved > 0.3f)
+		{
+			newPoints = float(gs->Saved) * 1.f;
+		}
+		else
+		{
+			newPoints = float(gs->Saved) * .9f;
+		}
+	}
+	else
+	{
+		newPoints = float(gs->Saved) * 1.45f;
+	}
+	gi->points += newPoints;
+	gi->AcquiredPoints += newPoints;
+	gi->SaveGame();
+	Super::EndPlay(EndPlayReason);
 }
 
 void ASaveThemAllGameMode::OnSongFinished()
