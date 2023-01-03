@@ -59,7 +59,7 @@ void ASaveThemAllGameMode::BeginPlay()
 
 	UWorld* w{ GetWorld() };
 
-	disintegrate = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/Effects/DonutDissolve.DonutDissolve"), nullptr, LOAD_None, nullptr);
+	//disintegrate = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/Effects/DonutDissolve.DonutDissolve"), nullptr, LOAD_None, nullptr);
 
 	ASaveThemAllGameState* state{ GetGameState<ASaveThemAllGameState>() };
 	for (TActorIterator<ADonutFlyerSpawner> ActorItr{ w }; ActorItr; ++ActorItr)
@@ -128,6 +128,7 @@ void ASaveThemAllGameMode::Score(AGoal* goal, APawn* player, APawn* ball)
 	ADonutFlyerPawn* donut{ Cast<ADonutFlyerPawn>(ball) };
 	spaceship->MaxSpeed += 5.f;
 	spaceship->MinSpeed -= 2.f;
+	UNiagaraSystem* disintegrate = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/Effects/DonutDissolve.DonutDissolve"), nullptr, LOAD_None, nullptr);
 	UNiagaraComponent* nc{ UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), disintegrate, ball->GetActorLocation(), ball->GetActorRotation(), ball->GetActorScale()) };
 	nc->SetVariableStaticMesh("StativcMesh", donut->GetPlaneMesh()->GetStaticMesh());
 	ball->Destroy();
