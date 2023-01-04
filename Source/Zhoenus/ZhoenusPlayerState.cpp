@@ -16,7 +16,7 @@ void AZhoenusPlayerState::OnDonutHitFromMe(float impactMagnitude)
 {
 	float impactBonus{ 5.f * impactMagnitude / 750.f };
 	BumpAggro += impactBonus;
-	UE_LOG(LogZhoenusPlayerState, Log, TEXT("Bump: %g - Shot: %g - Seen: %g -- Impact Bonus: %g"), BumpAggro, ShotAggro, SeenAggro, impactBonus);
+	//UE_LOG(LogZhoenusPlayerState, Log, TEXT("Bump: %g - Shot: %g - Seen: %g -- Impact Bonus: %g"), BumpAggro, ShotAggro, SeenAggro, impactBonus);
 }
 
 void AZhoenusPlayerState::OnDonutShootedFromMe()

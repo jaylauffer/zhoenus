@@ -93,4 +93,7 @@ public:
 
 	/** Returns PlaneMesh subobject **/
 	FORCEINLINE class UStaticMeshComponent* GetPlaneMesh() const { return PlaneMesh; }
+
+	UFUNCTION()
+	void DelayedDestroy(class UNiagaraComponent *cmp);
 };

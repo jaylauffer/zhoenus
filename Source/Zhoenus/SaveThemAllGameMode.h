@@ -25,7 +25,6 @@ public:
 	UFUNCTION()
 	virtual void OnSongFinished();
 
-	UNiagaraSystem* disintegrate;
 	USoundBase *song;
 };
 

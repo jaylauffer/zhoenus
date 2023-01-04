@@ -131,5 +131,9 @@ void ASaveThemAllGameMode::Score(AGoal* goal, APawn* player, APawn* ball)
 	UNiagaraSystem* disintegrate = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/Effects/DonutDissolve.DonutDissolve"), nullptr, LOAD_None, nullptr);
 	UNiagaraComponent* nc{ UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), disintegrate, ball->GetActorLocation(), ball->GetActorRotation(), ball->GetActorScale()) };
 	nc->SetVariableStaticMesh("StativcMesh", donut->GetPlaneMesh()->GetStaticMesh());
-	ball->Destroy();
+	nc->OnSystemFinished.AddDynamic(donut, &ADonutFlyerPawn::DelayedDestroy);
+	ball->SetActorHiddenInGame(true);
+	ball->SetActorEnableCollision(false);
+	ball->SetActorTickEnabled(false);
+	//ball->Destroy();
 }

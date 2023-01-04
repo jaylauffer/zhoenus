@@ -166,7 +166,9 @@ void ASpaceshipPawn::NotifyHit(class UPrimitiveComponent* MyComp, class AActor* 
 		//TODO: add condition for hitting opposite team
 		FVector push{ GetActorRotation().Quaternion().Vector() * CurrentForwardSpeed * PlaneMesh->GetMass() };
 		OtherComp->AddForceAtLocation(push, HitLocation);
+#if WITH_EDITOR
 		UE_LOG(LogSpaceshipPawn, Log, TEXT("Collision - other: %s .. me: %s -- push %s - %g %g"), Other?*Other->GetName():TEXT("--unknown--"), *GetName(), *push.ToString(), CurrentForwardSpeed, PlaneMesh->GetMass());
+#endif
 	}
 	else
 	{
