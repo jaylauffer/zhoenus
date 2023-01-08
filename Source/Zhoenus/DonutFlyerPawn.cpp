@@ -263,7 +263,7 @@ void ADonutFlyerPawn::ShotTimerExpired()
 
 //this function is called the particle effect which uses the pawn's static mesh
 //when the pawn flys into the goal..
-void ADonutFlyerPawn::DelayedDestroy(UNiagaraComponent *)
+void ADonutFlyerPawn::DelayedDestroy(UNiagaraComponent*)
 {
 	Destroy();
 }

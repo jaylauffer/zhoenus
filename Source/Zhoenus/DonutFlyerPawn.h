@@ -95,5 +95,6 @@ public:
 	FORCEINLINE class UStaticMeshComponent* GetPlaneMesh() const { return PlaneMesh; }
 
 	UFUNCTION()
-	void DelayedDestroy(class UNiagaraComponent *cmp);
+	void DelayedDestroy(class UNiagaraComponent* cmp);
+
 };

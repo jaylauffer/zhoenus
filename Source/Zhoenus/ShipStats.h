@@ -10,22 +10,22 @@ struct FShipStats
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Limits")
-	float MaxSpeed;
+	float MaxSpeed = 3000.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Limits")
-	float MinSpeed;
+	float MinSpeed = -1000.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Acceleration")
-	float ForwardAcceleration;
+	float ForwardAcceleration = 500.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Acceleration")
-	float PitchAcceleration;
+	float PitchAcceleration = 50.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Acceleration")
-	float YawAcceleration;
+	float YawAcceleration = 50.f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Acceleration")
-	float RollAcceleration;
+	float RollAcceleration = 100.f;
 
 };
 

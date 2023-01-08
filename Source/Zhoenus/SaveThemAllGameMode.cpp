@@ -59,8 +59,6 @@ void ASaveThemAllGameMode::BeginPlay()
 
 	UWorld* w{ GetWorld() };
 
-	//disintegrate = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/Effects/DonutDissolve.DonutDissolve"), nullptr, LOAD_None, nullptr);
-
 	ASaveThemAllGameState* state{ GetGameState<ASaveThemAllGameState>() };
 	for (TActorIterator<ADonutFlyerSpawner> ActorItr{ w }; ActorItr; ++ActorItr)
 	{
@@ -78,7 +76,7 @@ void ASaveThemAllGameMode::BeginPlay()
 	UAudioComponent* bgm{ UGameplayStatics::CreateSound2D(w, song) };
 	if (bgm)
 	{
-		int32 index{ FMath::RandHelper(5) };
+		int32 index{ FMath::RandHelper(16) };
 		bgm->SetIntParameter("WaveIndex", index);
 		bgm->OnAudioFinished.AddDynamic(this, &ASaveThemAllGameMode::OnSongFinished);
 		bgm->Play();
@@ -128,12 +126,24 @@ void ASaveThemAllGameMode::Score(AGoal* goal, APawn* player, APawn* ball)
 	ADonutFlyerPawn* donut{ Cast<ADonutFlyerPawn>(ball) };
 	spaceship->MaxSpeed += 5.f;
 	spaceship->MinSpeed -= 2.f;
-	UNiagaraSystem* disintegrate = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/Effects/DonutDissolve.DonutDissolve"), nullptr, LOAD_None, nullptr);
-	UNiagaraComponent* nc{ UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), disintegrate, ball->GetActorLocation(), ball->GetActorRotation(), ball->GetActorScale()) };
-	nc->SetVariableStaticMesh("StativcMesh", donut->GetPlaneMesh()->GetStaticMesh());
-	nc->OnSystemFinished.AddDynamic(donut, &ADonutFlyerPawn::DelayedDestroy);
-	ball->SetActorHiddenInGame(true);
-	ball->SetActorEnableCollision(false);
-	ball->SetActorTickEnabled(false);
-	//ball->Destroy();
+	
+	bool destroyDonut{ true };
+	UNiagaraSystem* disintegrate{ LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/Effects/DonutDissolve.DonutDissolve"), nullptr, LOAD_None, nullptr) };
+	if (disintegrate)
+	{
+		UNiagaraComponent* nc{ UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), disintegrate, ball->GetActorLocation(), ball->GetActorRotation(), ball->GetActorScale()) };
+		if (nc)
+		{
+			nc->SetVariableStaticMesh("StativcMesh", donut->GetPlaneMesh()->GetStaticMesh());
+			nc->OnSystemFinished.AddDynamic(donut, &ADonutFlyerPawn::DelayedDestroy);
+			ball->SetActorHiddenInGame(true);
+			ball->SetActorEnableCollision(false);
+			ball->SetActorTickEnabled(false);
+			destroyDonut = false;
+		}
+	}
+	if (destroyDonut)
+	{
+		ball->Destroy();
+	}
 }
