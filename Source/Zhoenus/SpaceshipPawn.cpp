@@ -24,9 +24,9 @@ DEFINE_LOG_CATEGORY_STATIC(LogSpaceshipPawn, Log, All);
 #define ON_SCREEN_DEBUG 1
 #ifdef ON_SCREEN_DEBUG
 #include <Runtime/Engine/Classes/Engine/Engine.h>
-#define ScreenDebug(text) if(GEngine)GEngine->AddOnScreenDebugMessage(-1, 1.5, FColor::White, text)
+#define ScreenDebug2(text) if(GEngine)GEngine->AddOnScreenDebugMessage(-1, 1.5, FColor::White, text)
 #else
-#define ScreenDebug(text) 
+#define ScreenDebug2(text) 
 #endif
 
 ASpaceshipPawn::ASpaceshipPawn(const FObjectInitializer &initializer)
