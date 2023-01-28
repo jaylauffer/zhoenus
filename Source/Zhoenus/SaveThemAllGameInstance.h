@@ -28,17 +28,22 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool LoadGame(const FString& SlotName, int32 UserIndex);
 
-	UPROPERTY(VisibleAnywhere, Category = Lifetime)
-	uint64 Saved;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Lifetime)
+	int64 Saved;
 
-	UPROPERTY(VisibleAnywhere, Category = Lifetime)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Lifetime)
 	float AcquiredPoints;
 
-	UPROPERTY(VisibleAnywhere, Category = Lifetime)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Lifetime)
 	float SpentPoints;
 
-	UPROPERTY(VisibleAnywhere, Category = Lifetime)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Lifetime)
 	float ConvertedPoints;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Lifetime)
+	int64 TotalAttempts;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Lifetime)
+	int64 TotalSuccess;
 };
 

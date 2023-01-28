@@ -34,6 +34,8 @@ void USaveThemAllGameInstance::MakeNewGame()
 		AcquiredPoints = 0.f;
 		SpentPoints = 0.f;
 		ConvertedPoints = 0.f;
+		TotalAttempts = 0;
+		TotalSuccess = 0;
 	}
 }
 
@@ -48,6 +50,8 @@ void USaveThemAllGameInstance::SaveGame()
 		save->AcquiredPoints = AcquiredPoints;
 		save->SpentPoints = SpentPoints;
 		save->ConvertedPoints = ConvertedPoints;
+		save->TotalAttempts = TotalAttempts;
+		save->TotalSuccess = TotalSuccess;
 
 		UGameplayStatics::AsyncSaveGameToSlot(save, save->SaveSlotName, save->UserIndex);
 	}
@@ -64,6 +68,8 @@ bool USaveThemAllGameInstance::LoadGame(const FString& SaveSlot, int32 UserIndex
 		AcquiredPoints = save->AcquiredPoints;
 		SpentPoints = save->SpentPoints;
 		ConvertedPoints = save->ConvertedPoints;
+		TotalAttempts = save->TotalAttempts;
+		TotalSuccess = save->TotalSuccess;
 		return true;
 	}
 	return false;

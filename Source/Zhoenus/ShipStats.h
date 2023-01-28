@@ -50,7 +50,7 @@ public:
 	float Points;
 
 	UPROPERTY(VisibleAnywhere, Category = Lifetime)
-	uint64 Saved;
+	int64 Saved;
 
 	UPROPERTY(VisibleAnywhere, Category = Lifetime)
 	float AcquiredPoints;
@@ -60,4 +60,11 @@ public:
 
 	UPROPERTY(VisibleAnywhere, Category = Lifetime)
 	float ConvertedPoints;
+
+	UPROPERTY(VisibleAnywhere, Category = Lifetime)
+	int64 TotalAttempts;
+
+	UPROPERTY(VisibleAnywhere, Category = Lifetime)
+	int64 TotalSuccess;
+
 };
