@@ -192,8 +192,8 @@ void ASpaceshipPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 		{
 			InputComponent->BindAxis("Thrust", this, &ASpaceshipPawn::ThrustInput);
 			InputComponent->BindAxis("MoveUp", this, &ASpaceshipPawn::MoveUpInput);
-			InputComponent->BindAxis("MoveRight", this, &ASpaceshipPawn::RotateRightInput);
-			InputComponent->BindAxis("RotateRight", this, &ASpaceshipPawn::MoveRightInput);
+			InputComponent->BindAxis("MoveRight", this, &ASpaceshipPawn::RotateRightInput); //left stick
+			InputComponent->BindAxis("RotateRight", this, &ASpaceshipPawn::MoveRightInput); //right
 		}
 	}
 }
