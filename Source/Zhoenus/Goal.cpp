@@ -2,6 +2,7 @@
 #include "DonutFlyerPawn.h"
 #include "DonutFlyerAIController.h"
 #include "ScoreKeeper.h"
+#include "SpaceshipPawn.h"
 #include "Components/ShapeComponent.h"
 #include "GameFramework/GameModeBase.h"
 
@@ -28,10 +29,12 @@ void AGoal::OnGoal(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
 {
 	if (GetNetMode() != NM_Client)
 	{
+		UWorld* World = GetWorld();
+		//assert WORLD
 		ADonutFlyerPawn* donut{ Cast<ADonutFlyerPawn>(otherActor) };
 		if (donut)
 		{
-			if (UWorld* World = GetWorld())
+			//if ()
 			{
 				IScoreKeeperInterface* scoreKeeper{ Cast<IScoreKeeperInterface>(World->GetAuthGameMode()) };
 				if (scoreKeeper)
@@ -42,6 +45,16 @@ void AGoal::OnGoal(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
 				}
 			}
 		}
+		ASpaceshipPawn* flyer{ Cast<ASpaceshipPawn>(otherActor) };
+		if (flyer)
+		{
+			//TODO: set target of donuts to goal..
+			for (const auto& dnt : flyer->Followers)
+			{
+				dnt->LockTarget(this);
+			}
+		}
 	}
 }
+
 

@@ -42,6 +42,7 @@ public:
 	void DisengageAutoCorrect(float Val);
 
 	void FireWeapon(float Val);
+	void LockTarget(AActor* truth);
 
 private:
 

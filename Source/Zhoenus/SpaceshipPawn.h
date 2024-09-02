@@ -45,6 +45,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = Status)
 	bool IsDonutTarget;
 
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = Status)
+	TSet<class ADonutFlyerPawn*> Followers;
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:

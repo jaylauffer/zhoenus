@@ -10,10 +10,34 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LOG_TEST, Log, All);
 
+namespace 
+{
+	static FVector Chasing(ADonutFlyerPawn* ship, AActor* target, FVector &lastChase)
+	{
+		FVector theChaseBefore{ lastChase };
+		if (target)
+		{
+			FVector targetLoc{ target->GetActorLocation() };
+			FVector Start{ ship->GetActorLocation() };
+			{
+				if (lastChase != targetLoc)
+				{
+					// - is forward + is back
+					ship->ThrustInput(-0.05f);
+				}
+			}
+			ship->TargetRot = (targetLoc - Start).Rotation();
+			lastChase = targetLoc;
+		}
+		return theChaseBefore;
+	}
 
+}
 
 ADonutFlyerAIController::ADonutFlyerAIController()
 {
+	//first edition LockedTarget is null
+	LockedTarget = nullptr;
 	bIsPlayerController = false;
 }
 
@@ -32,7 +56,7 @@ APawn* ADonutFlyerAIController::GetTargetPlayer()
 	int playerCount{ 0 };
 	APawn* ret{ nullptr };
 	float max_score{ 0.0 };
-	TArray<APawn*> cleanup;
+	TArray<AActor*> cleanup;
 	for (auto &elem : AggroMap) 
 	{
 		if (IsValid(elem.Key))
@@ -56,7 +80,13 @@ APawn* ADonutFlyerAIController::GetTargetPlayer()
 	{
 		for (auto& p : cleanup)
 		{
-			AggroMap.Remove(p);
+			if (ASpaceshipPawn* hope = Cast<ASpaceshipPawn>(p))
+			{
+				ADonutFlyerPawn* dnt{ GetPawn<ADonutFlyerPawn>() };
+				hope->Followers.Remove(dnt);
+				AggroMap.Remove(hope); //we're not really going to remove hope though d-;
+			}
+
 		}
 	}
 	// update target player's status.
@@ -66,13 +96,10 @@ APawn* ADonutFlyerAIController::GetTargetPlayer()
 		if(auto pawn = Cast<ASpaceshipPawn>(pc->GetPawn()))
 		{
 			pawn->IsDonutTarget = pawn == ret;
+			pawn->Followers.Add(this->GetPawn<ADonutFlyerPawn>());
 		}
 	}
 	
-	//if (GEngine) {
-	//	GEngine->AddOnScreenDebugMessage(1, 15.0f, FColor::White, FString::Printf(TEXT("Player Number: %d"), playerCount));
-	//}
-	//UE_LOG(LOG_TEST, Warning, TEXT("Total Player Number: %d"), playerCount);
 	return ret;
 }
 
@@ -244,6 +271,13 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 			//UE_LOG(LOG_TEST, Log, TEXT("Hovering switch to searching"));
 		}
 		break;
+	case LOCKED:
+		if (!lastChase)
+		{
+			lastChase = FVector{};
+		}
+		Chasing(GetPawn<ADonutFlyerPawn>(), LockedTarget, lastChase.value());
+		break;
 	case STUCK:
 		//the donutflyer can not reach the target.. because of some obstacle..
 		//this may be because a player is under the "floor" for example
@@ -303,3 +337,20 @@ void ADonutFlyerAIController::DecreaseAggro(float DeltaSeconds)
 	}
 }
 
+
+APawn* ADonutFlyerAIController::LockTarget(AActor* goal)
+{
+	if (!LockedTarget) //Zhoenus first edition, Zhoenus I locked target is set once and will not be changed, 
+		//this can be explored in post-quantum era to enable more bountiful gameplay experiences
+	{
+		LockedTarget = goal;
+		currentState = LOCKED;
+		//TODO: assigning locked target should emit some event with the target.. (sparks of joy for example)
+	}
+	return Cast<APawn>(goal); //we give back the goal .. and it may have altered..
+}
+
+void ADonutFlyerAIController::OnUnPossess()
+{
+	Super::OnUnPossess();
+}
