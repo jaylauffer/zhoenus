@@ -354,3 +354,10 @@ void ADonutFlyerAIController::OnUnPossess()
 {
 	Super::OnUnPossess();
 }
+
+void ADonutFlyerAIController::BeginPlay()
+{
+	Super::BeginPlay(); // Call the parent class's BeginPlay function
+	LockedTarget = nullptr; //always begin with no locked target
+	// Your initialization code here
+}

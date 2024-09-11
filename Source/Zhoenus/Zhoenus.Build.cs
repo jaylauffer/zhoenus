@@ -8,7 +8,7 @@ public class Zhoenus : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "EngineSettings", "InputCore", "UMG", "Slate", "SlateCore", "Niagara", "ReplicationGraph", "NetworkPrediction", "MetasoundEngine", "AudioExtensions" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "EngineSettings", "InputCore", "UMG", "Slate", "SlateCore", "Niagara", "ReplicationGraph", "NetworkPrediction", "MetasoundEngine", "AudioExtensions", "EnhancedInput" });
 		//PrivateDependecyModuleNames.AddRange(new string[] { "Metasound" });
 	}
 }

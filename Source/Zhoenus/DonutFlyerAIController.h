@@ -44,6 +44,9 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 	float SearchDistance{ 500.f };
 
+protected:
+	virtual void BeginPlay() override final;
+
 private:
 	float currentStateEntered{ 0.f };
 	float playerTargetScore(APawn* pawn);

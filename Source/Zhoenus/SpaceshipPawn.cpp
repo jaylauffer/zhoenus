@@ -16,6 +16,9 @@
 #include "TimerManager.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+
 //todo cleanup dependency on SaveThemAllGameInstance..
 #include "SaveThemAllGameInstance.h"
 
@@ -112,6 +115,19 @@ void ASpaceshipPawn::BeginPlay()
 			FlyingMovementComponent->ProduceInputDelegate.BindUObject(this, &ASpaceshipPawn::ProduceInput);
 		}
 	}
+
+	// Set up the Enhanced Input Subsystem
+	if (APlayerController* PController = Cast<APlayerController>(GetController()))
+	{
+		UEnhancedInputLocalPlayerSubsystem* Subsystem =
+			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PController->GetLocalPlayer());
+
+		if (Subsystem)
+		{
+			// Add your input mapping context here
+			Subsystem->AddMappingContext(ShipInputMappingContext, 0);
+		}
+	}
 }
 
 void ASpaceshipPawn::Tick(float DeltaSeconds)
@@ -186,11 +202,22 @@ void ASpaceshipPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 	check(PlayerInputComponent);
 
 	// Bind our control axis' to callback functions
+	//TODO: make this a collaborative experience
 	if (APlayerController* PC = Cast<APlayerController>(Controller))
 	{
-		if (PC->PlayerInput)
+		UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+		if (EnhancedInputComponent)
 		{
-			InputComponent->BindAxis("Thrust", this, &ASpaceshipPawn::ThrustInput);
+			EnhancedInputComponent->BindAction(ThrustAction, ETriggerEvent::Started, this, &ASpaceshipPawn::ThrustInput);
+			EnhancedInputComponent->BindAction(PitchAction, ETriggerEvent::Started, this, &ASpaceshipPawn::PitchInput);
+			EnhancedInputComponent->BindAction(YawAction, ETriggerEvent::Started, this, &ASpaceshipPawn::YawInput);
+			EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &ASpaceshipPawn::RollInput);
+			// Add more input bindings as needed
+		}
+		else if (PC->PlayerInput)
+		{
+			
+			InputComponent->BindAxis("Thrust", this, &ASpaceshipPawn::OrigThrustInput);
 			InputComponent->BindAxis("MoveUp", this, &ASpaceshipPawn::MoveUpInput);
 			InputComponent->BindAxis("MoveRight", this, &ASpaceshipPawn::RotateRightInput); //left stick
 			InputComponent->BindAxis("RotateRight", this, &ASpaceshipPawn::MoveRightInput); //right
@@ -198,11 +225,35 @@ void ASpaceshipPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 	}
 }
 
-void ASpaceshipPawn::ThrustInput(float Val)
+void ASpaceshipPawn::OrigThrustInput(float Val)
 {
 	//UE_LOG(LogSpaceshipPawn, Log, TEXT("Thrust %g"), Val);
 	//ScreenDebug(FString::Printf(TEXT("Thrust %g"), Val));
 	CachedInput.W = FMath::Clamp(Val, -1.f, 1.f);
+}
+
+void ASpaceshipPawn::ThrustInput(const FInputActionValue& Value)
+{
+	float Thrust = Value.Get<float>();
+	CachedInput.W = FMath::Clamp(Thrust, -1.f, 1.f);
+}
+
+void ASpaceshipPawn::PitchInput(const FInputActionValue& Value)
+{
+	float Pitch = Value.Get<float>();
+	CachedInput.X = FMath::Clamp(Pitch, -1.f, 1.f);
+}
+
+void ASpaceshipPawn::YawInput(const FInputActionValue& Value)
+{
+	float Yaw = Value.Get<float>();
+	CachedInput.Y = FMath::Clamp(Yaw, -1.f, 1.f);
+}
+
+void ASpaceshipPawn::RollInput(const FInputActionValue& Value)
+{
+	float Roll = Value.Get<float>();
+	CachedInput.Z = FMath::Clamp(Roll, -1.f, 1.f);
 }
 
 void ASpaceshipPawn::MoveUpInput(float Val)

@@ -7,6 +7,7 @@
 #include "ZhoenusMovementSimulation.h"
 #include "SpaceshipPawn.generated.h"
 
+struct FInputActionValue;
 
 UCLASS(Config=Game)
 class ASpaceshipPawn : public APawn
@@ -25,8 +26,29 @@ public:
 	UPROPERTY(Category = Audio, EditAnywhere, BlueprintReadWrite)
 	class USoundBase* FireSound;
 
+	// Input action for jumping
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	class UInputAction* ThrustAction;
+
+	// Input action for moving forward
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* PitchAction;
+
+	// Input action for moving forward
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* YawAction;
+
+	// Input action for moving right
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* RollAction;
+
 	/** Bound to the thrust axis */
-	void ThrustInput(float Val);
+	void OrigThrustInput(float Val);
+	void ThrustInput(const FInputActionValue& Value);
+	void PitchInput(const FInputActionValue& Value);
+	void YawInput(const FInputActionValue& Value);
+	void RollInput(const FInputActionValue& Value);
+
 	/** Bound to the vertical axis */
 	void MoveUpInput(float Val);
 
@@ -47,6 +69,9 @@ public:
 
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = Status)
 	TSet<class ADonutFlyerPawn*> Followers;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	class UInputMappingContext* ShipInputMappingContext;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
