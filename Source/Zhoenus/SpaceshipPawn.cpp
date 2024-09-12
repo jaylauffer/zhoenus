@@ -212,6 +212,7 @@ void ASpaceshipPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 			EnhancedInputComponent->BindAction(PitchAction, ETriggerEvent::Started, this, &ASpaceshipPawn::PitchInput);
 			EnhancedInputComponent->BindAction(YawAction, ETriggerEvent::Started, this, &ASpaceshipPawn::YawInput);
 			EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &ASpaceshipPawn::RollInput);
+			EnhancedInputComponent->BindAction(StabilizeAction, ETriggerEvent::Started, this, &ASpaceshipPawn::StabilizeInput);
 			// Add more input bindings as needed
 		}
 		else if (PC->PlayerInput)
@@ -256,6 +257,22 @@ void ASpaceshipPawn::RollInput(const FInputActionValue& Value)
 	CachedInput.Z = FMath::Clamp(Roll, -1.f, 1.f);
 }
 
+void ASpaceshipPawn::StabilizeInput(const FInputActionValue& Value)
+{
+	AutoCorrectRate =
+	StabilityInput.X = Value.Get<float>();
+	if (FMath::IsNearlyEqual(AutoCorrectRate, 0.f))
+	{
+		GetPlaneMesh()->SetAngularDamping(0.f);
+		GetPlaneMesh()->SetLinearDamping(0.f);
+	}
+	else
+	{
+		GetPlaneMesh()->SetAngularDamping(20.f * AutoCorrectRate);
+		GetPlaneMesh()->SetLinearDamping(20.f * AutoCorrectRate);
+	}
+}
+
 void ASpaceshipPawn::MoveUpInput(float Val)
 {
 	//Pitch
@@ -281,7 +298,7 @@ void ASpaceshipPawn::RotateRightInput(float Val)
 	CachedInput.Z = FMath::Clamp(Val, -1.f, 1.f);
 }
 
-void ASpaceshipPawn::DisengageAutoCorrect(float Val)
+void ASpaceshipPawn::OrigDisengageAutoCorrect(float Val)
 {
 	AutoCorrectRate = Val;
 	if (FMath::IsNearlyEqual(Val, 0.f))

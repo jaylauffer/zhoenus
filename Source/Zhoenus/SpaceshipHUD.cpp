@@ -7,6 +7,14 @@
 #include "Blueprint/UserWidget.h"
 #include "SpaceshipPawn.h"
 
+namespace
+{
+	const FLinearColor PitchColor(1.f, 0.f, 1.f);
+	const FLinearColor YawColor(0.5f, 1.f, 0.5f);
+	const FLinearColor RollColor(1.f, 0, .5f);
+	const FLinearColor StabilizeColor(.7f, 0, .5f);
+}
+
 ASpaceshipHUD::ASpaceshipHUD()
 {
 	static ConstructorHelpers::FClassFinder<UUserWidget> Widget(TEXT("/Game/Blueprints/HUD"));
@@ -36,7 +44,14 @@ void ASpaceshipHUD::DrawHUD()
 	ASpaceshipPawn* pawn{ Cast<ASpaceshipPawn>(GetOwningPawn()) };
 	if (pawn)
 	{
+		//v is thrust
 		FVector2D v{ Canvas->ClipX * .98f, Canvas->ClipY * .7f };
+
+		FVector2D p{ Canvas->ClipX * .98f, Canvas->ClipY * .7f };
+		FVector2D r{ Canvas->ClipX * .98f, Canvas->ClipY * .7f };
+		FVector2D y{ Canvas->ClipX * .98f, Canvas->ClipY * .7f };
+
+		FVector2D s{ Canvas->ClipX * .97f, Canvas->ClipY * .7f };
 
 		float& Speed{ pawn->CurrentForwardSpeed };
 		if (Speed > 4.6f)
@@ -61,6 +76,62 @@ void ASpaceshipHUD::DrawHUD()
 		{
 			FVector2D e{ 10.f, -Accel * Canvas->ClipY * .2f };
 			DrawRect(FLinearColor::Green, v.X, v.Y, e.X, e.Y);
+		}
+
+		//work through these.. pitch, 
+		p.X -= 16.f;
+		double Pitch{ -pawn->CachedInput.X };
+		if (Pitch > 0.02f)
+		{
+			FVector2D e{ 10.f, -Pitch * Canvas->ClipY * .6f };
+			DrawRect(PitchColor, p.X, p.Y, e.X, e.Y);
+		}
+		else if (Pitch < -0.02f)
+		{
+			FVector2D e{ 10.f, -Pitch * Canvas->ClipY * .2f };
+			DrawRect(PitchColor, p.X, p.Y, e.X, e.Y);
+		}
+
+		//work through these.. roll
+		r.X -= 18.f;
+		double Roll{ -pawn->CachedInput.Z};
+		if (Roll > 0.02f)
+		{
+			FVector2D e{ 10.f, -Roll * Canvas->ClipY * .6f };
+			DrawRect(RollColor, r.X, r.Y, e.X, e.Y);
+		}
+		else if (Roll < -0.02f)
+		{
+			FVector2D e{ 10.f, -Roll * Canvas->ClipY * .2f };
+			DrawRect(RollColor, r.X, r.Y, e.X, e.Y);
+		}
+
+		//work through these.. yaw
+		y.X -= 20.f;
+		double Yaw{ -pawn->CachedInput.Y };
+		if (Yaw > 0.02f)
+		{
+			FVector2D e{ 10.f, -Yaw * Canvas->ClipY * .6f };
+			DrawRect(YawColor, y.X, y.Y, e.X, e.Y);
+		}
+		else if (Yaw < -0.02f)
+		{
+			FVector2D e{ 10.f, -Yaw * Canvas->ClipY * .2f };
+			DrawRect(YawColor, y.X, y.Y, e.X, e.Y);
+		}
+
+		//work through these.. stabilize
+		s.X -= 23.f;
+		double Stabilize{ -pawn->StabilityInput.X };
+		if (Stabilize > 0.02f)
+		{
+			FVector2D e{ 10.f, -Stabilize * Canvas->ClipY * .6f };
+			DrawRect(StabilizeColor, s.X, s.Y, e.X, e.Y);
+		}
+		else if (Stabilize < -0.02f)
+		{
+			FVector2D e{ 10.f, -Stabilize * Canvas->ClipY * .2f };
+			DrawRect(StabilizeColor, s.X, s.Y, e.X, e.Y);
 		}
 	}
 	

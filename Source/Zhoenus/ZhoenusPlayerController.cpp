@@ -54,7 +54,7 @@ void AZhoenusPlayerController::SetupInputComponent()
 	Super::SetupInputComponent();
 	if (!SVirtualJoystick::ShouldDisplayTouchInterface())
 	{
-		InputComponent->BindAxis("DisengageAutoCorrect", this, &AZhoenusPlayerController::DisengageAutoCorrect);
+//		InputComponent->BindAxis("DisengageAutoCorrect", this, &AZhoenusPlayerController::DisengageAutoCorrect);
 		InputComponent->BindAxis("FireWeapon", this, &AZhoenusPlayerController::FireWeapon);
 	}
 
@@ -78,7 +78,7 @@ void AZhoenusPlayerController::DisengageAutoCorrect(float Val)
 	if (pawn)
 	{
 		//UE_LOG(LogZhoenus, Display, TEXT("Engage Auto Correct %f"), Val);
-		pawn->DisengageAutoCorrect(Val);
+		pawn->OrigDisengageAutoCorrect(Val);
 		//ServerDisengageAutoCorrect(Val);
 	}
 }
@@ -89,7 +89,7 @@ void AZhoenusPlayerController::ServerDisengageAutoCorrect_Implementation(float V
 	if (pawn)
 	{
 		//UE_LOG(LogZhoenus, Display, TEXT("Engage Auto Correct %f"), Val);
-		pawn->DisengageAutoCorrect(Val);
+		pawn->OrigDisengageAutoCorrect(Val);
 	}
 }
 

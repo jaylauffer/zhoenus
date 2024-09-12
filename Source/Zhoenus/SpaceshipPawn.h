@@ -42,12 +42,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* RollAction;
 
+	// Input action for stabilizing the ship
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* StabilizeAction;
+
 	/** Bound to the thrust axis */
 	void OrigThrustInput(float Val);
 	void ThrustInput(const FInputActionValue& Value);
 	void PitchInput(const FInputActionValue& Value);
 	void YawInput(const FInputActionValue& Value);
 	void RollInput(const FInputActionValue& Value);
+	void StabilizeInput(const FInputActionValue& Value);
 
 	/** Bound to the vertical axis */
 	void MoveUpInput(float Val);
@@ -57,7 +62,7 @@ public:
 
 	void RotateRightInput(float Val);
 
-	void DisengageAutoCorrect(float Val);
+	void OrigDisengageAutoCorrect(float Val);
 
 	void FireWeapon(float Val);
 
@@ -109,6 +114,7 @@ private:
 
 public:
 	FQuat CachedInput;
+	FQuat StabilityInput;
 
 	/** How quickly forward speed changes */
 	UPROPERTY(Category = Plane, EditAnywhere)
