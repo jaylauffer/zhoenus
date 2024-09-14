@@ -11,7 +11,7 @@ namespace
 {
 	const FLinearColor PitchColor(1.f, 0.f, 1.f);
 	const FLinearColor YawColor(0.5f, 1.f, 0.5f);
-	const FLinearColor RollColor(1.f, 0, .5f);
+	const FLinearColor RollColor(.3f, 0, 1.f);
 	const FLinearColor StabilizeColor(.7f, 0, .5f);
 }
 
@@ -48,8 +48,9 @@ void ASpaceshipHUD::DrawHUD()
 		FVector2D v{ Canvas->ClipX * .98f, Canvas->ClipY * .7f };
 
 		FVector2D p{ Canvas->ClipX * .98f, Canvas->ClipY * .7f };
-		FVector2D r{ Canvas->ClipX * .98f, Canvas->ClipY * .7f };
-		FVector2D y{ Canvas->ClipX * .98f, Canvas->ClipY * .7f };
+		FVector2D rl{ Canvas->ClipX * .04f, Canvas->ClipY * .7f };
+		FVector2D rr{ Canvas->ClipX * .96f, Canvas->ClipY * .7f };
+		FVector2D y{ Canvas->ClipX * .5f, Canvas->ClipY * .1f };
 
 		FVector2D s{ Canvas->ClipX * .97f, Canvas->ClipY * .7f };
 
@@ -93,17 +94,18 @@ void ASpaceshipHUD::DrawHUD()
 		}
 
 		//work through these.. roll
-		r.X -= 18.f;
+		//split the roll to two bars (left one and right one)
+		//rl.X -= 18.f;
 		double Roll{ -pawn->CachedInput.Z};
 		if (Roll > 0.02f)
 		{
 			FVector2D e{ 10.f, -Roll * Canvas->ClipY * .6f };
-			DrawRect(RollColor, r.X, r.Y, e.X, e.Y);
+			DrawRect(RollColor, rl.X, rl.Y, e.X, e.Y);
 		}
 		else if (Roll < -0.02f)
 		{
-			FVector2D e{ 10.f, -Roll * Canvas->ClipY * .2f };
-			DrawRect(RollColor, r.X, r.Y, e.X, e.Y);
+			FVector2D e{ 10.f, -Roll * Canvas->ClipY * .6f };
+			DrawRect(RollColor, rr.X, rr.Y, e.X, e.Y);
 		}
 
 		//work through these.. yaw
@@ -111,12 +113,12 @@ void ASpaceshipHUD::DrawHUD()
 		double Yaw{ -pawn->CachedInput.Y };
 		if (Yaw > 0.02f)
 		{
-			FVector2D e{ 10.f, -Yaw * Canvas->ClipY * .6f };
+			FVector2D e{ -Yaw * Canvas->ClipX * .6f, 10.f };
 			DrawRect(YawColor, y.X, y.Y, e.X, e.Y);
 		}
 		else if (Yaw < -0.02f)
 		{
-			FVector2D e{ 10.f, -Yaw * Canvas->ClipY * .2f };
+			FVector2D e{ -Yaw * Canvas->ClipY * .6f, 10.f };
 			DrawRect(YawColor, y.X, y.Y, e.X, e.Y);
 		}
 
