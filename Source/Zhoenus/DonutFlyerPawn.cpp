@@ -104,6 +104,7 @@ void ADonutFlyerPawn::Tick(float DeltaSeconds)
 			switch (ai->currentState)
 			{
 			case ADonutFlyerAIController::CHASING:
+			case ADonutFlyerAIController::LOCKED:
 				if (currentRot != TargetRot)
 				{
 					FQuat target_quaternion = TargetRot.Quaternion();
@@ -268,8 +269,8 @@ void ADonutFlyerPawn::DelayedDestroy(UNiagaraComponent*)
 	Destroy();
 }
 
-void ADonutFlyerPawn::LockTarget(AActor* Truth)
+void ADonutFlyerPawn::LockTarget(AActor* Truth, const FVector &Location)
 {
 	ADonutFlyerAIController* eddie{ Cast<ADonutFlyerAIController>(Controller) };
-	eddie->LockTarget(Truth);
+	eddie->LockTarget(Truth, Location);
 }

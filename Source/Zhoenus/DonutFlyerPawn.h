@@ -42,7 +42,7 @@ public:
 	void DisengageAutoCorrect(float Val);
 
 	void FireWeapon(float Val);
-	void LockTarget(AActor* truth);
+	void LockTarget(AActor* truth, const FVector &Location);
 
 private:
 

@@ -12,23 +12,19 @@ DEFINE_LOG_CATEGORY_STATIC(LOG_TEST, Log, All);
 
 namespace 
 {
-	static FVector Chasing(ADonutFlyerPawn* ship, AActor* target, FVector &lastChase)
+	static FVector Chasing(ADonutFlyerPawn* ship, const FVector & targetLoc, FVector &lastChase)
 	{
 		FVector theChaseBefore{ lastChase };
-		if (target)
+		FVector Start{ ship->GetActorLocation() };
 		{
-			FVector targetLoc{ target->GetActorLocation() };
-			FVector Start{ ship->GetActorLocation() };
+			if (lastChase != targetLoc)
 			{
-				if (lastChase != targetLoc)
-				{
-					// - is forward + is back
-					ship->ThrustInput(-0.05f);
-				}
+				// - is forward + is back
+				ship->ThrustInput(-0.05f);
 			}
-			ship->TargetRot = (targetLoc - Start).Rotation();
-			lastChase = targetLoc;
 		}
+		ship->TargetRot = (targetLoc - Start).Rotation();
+		lastChase = targetLoc;
 		return theChaseBefore;
 	}
 
@@ -276,7 +272,7 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 		{
 			lastChase = FVector{};
 		}
-		Chasing(GetPawn<ADonutFlyerPawn>(), LockedTarget, lastChase.value());
+		Chasing(GetPawn<ADonutFlyerPawn>(), LockedLocation, lastChase.value());
 		break;
 	case STUCK:
 		//the donutflyer can not reach the target.. because of some obstacle..
@@ -338,12 +334,13 @@ void ADonutFlyerAIController::DecreaseAggro(float DeltaSeconds)
 }
 
 
-APawn* ADonutFlyerAIController::LockTarget(AActor* goal)
+APawn* ADonutFlyerAIController::LockTarget(AActor* goal, const FVector &Location)
 {
 	if (!LockedTarget) //Zhoenus first edition, Zhoenus I locked target is set once and will not be changed, 
 		//this can be explored in post-quantum era to enable more bountiful gameplay experiences
 	{
 		LockedTarget = goal;
+		LockedLocation = Location;
 		currentState = LOCKED;
 		//TODO: assigning locked target should emit some event with the target.. (sparks of joy for example)
 	}

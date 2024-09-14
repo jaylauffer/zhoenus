@@ -24,7 +24,7 @@ public:
 	virtual void Tick(float deltaSeconds) override;
 	APawn * GetTargetPlayer();
 	APawn * GetTargetPlayer(TArray<APawn *> players);
-	APawn* LockTarget(AActor* goal);
+	APawn* LockTarget(AActor* goal, const FVector &Location);
 
 	void OnUnPossess() final;
 
@@ -69,4 +69,5 @@ private:
 	//the AI will then return LockedTarget instead of reevaluating the score.. the mechanics of this can be revisited
 	//and expanded to enable more gameplay options, for the first edition, lock target always stays true
 	AActor* LockedTarget;
+	FVector LockedLocation;
 };
