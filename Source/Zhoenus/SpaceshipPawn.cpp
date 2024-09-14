@@ -208,11 +208,11 @@ void ASpaceshipPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 		UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
 		if (EnhancedInputComponent)
 		{
-			EnhancedInputComponent->BindAction(ThrustAction, ETriggerEvent::Started, this, &ASpaceshipPawn::ThrustInput);
-			EnhancedInputComponent->BindAction(PitchAction, ETriggerEvent::Started, this, &ASpaceshipPawn::PitchInput);
-			EnhancedInputComponent->BindAction(YawAction, ETriggerEvent::Started, this, &ASpaceshipPawn::YawInput);
-			EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &ASpaceshipPawn::RollInput);
-			EnhancedInputComponent->BindAction(StabilizeAction, ETriggerEvent::Started, this, &ASpaceshipPawn::StabilizeInput);
+			EnhancedInputComponent->BindAction(ThrustAction, ETriggerEvent::Triggered, this, &ASpaceshipPawn::ThrustInput);
+			EnhancedInputComponent->BindAction(PitchAction, ETriggerEvent::Triggered, this, &ASpaceshipPawn::PitchInput);
+			EnhancedInputComponent->BindAction(YawAction, ETriggerEvent::Triggered, this, &ASpaceshipPawn::YawInput);
+			EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Triggered, this, &ASpaceshipPawn::RollInput);
+			EnhancedInputComponent->BindAction(StabilizeAction, ETriggerEvent::Triggered, this, &ASpaceshipPawn::StabilizeInput);
 			// Add more input bindings as needed
 		}
 		else if (PC->PlayerInput)
