@@ -272,5 +272,8 @@ void ADonutFlyerPawn::DelayedDestroy(UNiagaraComponent*)
 void ADonutFlyerPawn::LockTarget(AActor* Truth, const FVector &Location)
 {
 	ADonutFlyerAIController* eddie{ Cast<ADonutFlyerAIController>(Controller) };
-	eddie->LockTarget(Truth, Location);
+    if(IsValid(eddie))
+    {
+        eddie->LockTarget(Truth, Location);
+    }
 }
