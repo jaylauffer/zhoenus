@@ -51,9 +51,10 @@ void AGoal::OnGoal(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
 			//TODO: set target of donuts to goal..
 			for (const auto& dnt : flyer->Followers)
 			{
-                if(IsValid(dnt))
+				ADonutFlyerPawn *dfp{ dnt.Get() };
+                if(IsValid(dfp))
                 {
-                    dnt->LockTarget(this, sweepResult.ImpactPoint);
+                    dfp->LockTarget(this, sweepResult.ImpactPoint);
                 }
 			}
 			flyer->Followers.Empty();

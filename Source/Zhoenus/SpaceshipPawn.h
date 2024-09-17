@@ -73,7 +73,7 @@ public:
 	bool IsDonutTarget;
 
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = Status)
-	TSet<class ADonutFlyerPawn*> Followers;
+	TSet<TWeakObjectPtr<class ADonutFlyerPawn>> Followers;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	class UInputMappingContext* ShipInputMappingContext;
