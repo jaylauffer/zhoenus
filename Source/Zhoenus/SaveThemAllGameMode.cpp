@@ -52,8 +52,8 @@ void ASaveThemAllGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-#if WITH_EDITOR
 	auto gi{ GetGameInstance<USaveThemAllGameInstance>() };
+#if WITH_EDITOR
 	gi->LoadGame("SaveSlot01", 0);
 #endif
 
@@ -64,19 +64,14 @@ void ASaveThemAllGameMode::BeginPlay()
 	{
 		state->Total += ActorItr->SpawnAmount;
 	}
-	////FBox box{ALevelBounds::CalculateLevelBounds(w->GetCurrentLevel())};
-	//FBox box{ FVector{-18000, -18000, 100}, FVector{18000, 18000, 12000} };
-	//for (int i = 0; i < 100; ++i)
-	//{
-	//	FVector spawn{ FMath::RandPointInBox(box) };
-	//	FRotator rot{ };
-	//	w->SpawnActor<ADonutFlyerPawn>(spawn, rot);
-	//}
 
 	UAudioComponent* bgm{ UGameplayStatics::CreateSound2D(w, song) };
 	if (bgm)
 	{
-		int32 index{ FMath::RandHelper(16) };
+		//Index 0 is Ode to Taylor Swift, we want the first time a player plays that they get Ode to TS
+		//with this code the first time players will get ode to ts, and until
+		//the total attempts pass 15, they will tend towards the lower indexes (indices) 
+		int32 index{ static_cast<int32>(FMath::RandHelper(16) % (gi->TotalAttempts + 1)) };
 		bgm->SetIntParameter("WaveIndex", index);
 		bgm->OnAudioFinished.AddDynamic(this, &ASaveThemAllGameMode::OnSongFinished);
 		bgm->Play();
@@ -110,6 +105,7 @@ void ASaveThemAllGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 	gi->points += newPoints;
 	gi->AcquiredPoints += newPoints;
+	gi->TotalAttempts++;
 	gi->SaveGame();
 	Super::EndPlay(EndPlayReason);
 }

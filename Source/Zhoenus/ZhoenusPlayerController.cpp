@@ -16,13 +16,13 @@
 
 AZhoenusPlayerController::AZhoenusPlayerController()
 {
-	//{
-	//	static ConstructorHelpers::FClassFinder<UZhoenusTouchUI> TouchUIFinder(TEXT("/Game/Touch/TouchUI"));
-	//	if (TouchUIFinder.Class != nullptr)
-	//	{
-	//		wTouchUI = TouchUIFinder.Class;
-	//	}
-	//}
+	{
+		static ConstructorHelpers::FClassFinder<UZhoenusTouchUI> TouchUIFinder(TEXT("/Game/Blueprints/UI/Touch/loadngoTouch"));
+		if (TouchUIFinder.Class != nullptr)
+		{
+			wTouchUI = TouchUIFinder.Class;
+		}
+	}
 }
 
 AZhoenusPlayerController::~AZhoenusPlayerController()
@@ -34,19 +34,19 @@ void AZhoenusPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	//if (IsLocalPlayerController() && SVirtualJoystick::ShouldDisplayTouchInterface() && wTouchUI)
-	//{
-	//	touchUI = CreateWidget<UZhoenusTouchUI>(this, wTouchUI);
-	//	if (touchUI)
-	//	{
-	//		touchUI->AddToViewport();
+	if (IsLocalPlayerController() && SVirtualJoystick::ShouldDisplayTouchInterface() && wTouchUI)
+	{
+		touchUI = CreateWidget<UZhoenusTouchUI>(this, wTouchUI);
+		if (touchUI)
+		{
+			touchUI->AddToViewport();
 
-	//		touchUI->ButtonFire->OnPressed.AddDynamic(this, &AZhoenusPlayerController::TouchFirePressed);
-	//		touchUI->ButtonFire->OnReleased.AddDynamic(this, &AZhoenusPlayerController::TouchFireReleased);
-	//		touchUI->ButtonStabilize->OnPressed.AddDynamic(this, &AZhoenusPlayerController::TouchAutoCorrectPressed);
-	//		touchUI->ButtonStabilize->OnReleased.AddDynamic(this, &AZhoenusPlayerController::TouchAutoCorrectReleased);
-	//	}
-	//}
+			touchUI->ButtonFire->OnPressed.AddDynamic(this, &AZhoenusPlayerController::TouchFirePressed);
+			touchUI->ButtonFire->OnReleased.AddDynamic(this, &AZhoenusPlayerController::TouchFireReleased);
+			touchUI->ButtonStabilize->OnPressed.AddDynamic(this, &AZhoenusPlayerController::TouchAutoCorrectPressed);
+			touchUI->ButtonStabilize->OnReleased.AddDynamic(this, &AZhoenusPlayerController::TouchAutoCorrectReleased);
+		}
+	}
 }
 
 void AZhoenusPlayerController::SetupInputComponent()
