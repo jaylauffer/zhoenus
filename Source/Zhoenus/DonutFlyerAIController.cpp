@@ -284,16 +284,11 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 		}
 		Chasing(GetPawn<ADonutFlyerPawn>(), LockedLocation, lastChase.value());
 
-		if (CurrentTimeSeconds - currentStateEntered > 2.f && Start == PreviousLocation) {
-			// Velocity-based stuck detection
-			FVector Velocity = GetPawn()->GetVelocity();
-			float Speed = Velocity.Size();
-			if (Speed < 1.f) // If speed is too low, likely stuck
-			{
-				currentState = STUCK;
-				currentStateEntered = CurrentTimeSeconds;
-				UE_LOG(LOG_TEST, Warning, TEXT("LOCKED mode detected low velocity, switching to STUCK."));
-			}
+		if (CurrentTimeSeconds - currentStateEntered > 2.f && Start == PreviousLocation) 
+		{
+			currentState = STUCK;
+			currentStateEntered = CurrentTimeSeconds;
+			UE_LOG(LOG_TEST, Warning, TEXT("LOCKED mode detected low velocity, switching to STUCK."));
 		}
 		break;
 	case STUCK:
