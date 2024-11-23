@@ -37,6 +37,9 @@ ADonutFlyerPawn::ADonutFlyerPawn()
 	PlaneMesh->SetStaticMesh(ConstructorStatics.PlaneMesh.Get());	// Set static mesh
 	PlaneMesh->BodyInstance.bSimulatePhysics = true;
 	PlaneMesh->BodyInstance.bEnableGravity = false;
+	//don't cause camera swingarms to jump
+	PlaneMesh->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+
 	//PlaneMesh->SetAngularDamping(1.f);
 	//PlaneMesh->SetLinearDamping(1.f);
 	RootComponent = PlaneMesh;

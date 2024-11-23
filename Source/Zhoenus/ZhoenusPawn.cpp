@@ -228,7 +228,7 @@ AZhoenusPawn::AZhoenusPawn(const FObjectInitializer &initializer) : Super(initia
 	SpringArm->CameraLagSpeed = 20.f;
 	SpringArm->bEnableCameraRotationLag = true;
 	SpringArm->CameraRotationLagSpeed = 7.5f;
-	SpringArm->ProbeChannel = ECC_Visibility;
+	SpringArm->ProbeChannel = ECC_Camera;
 
 	// Create camera component 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera0"));
