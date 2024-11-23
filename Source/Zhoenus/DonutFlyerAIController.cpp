@@ -223,12 +223,12 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 			}
 			else
 			{
-				if (lastChase != targetLoc)
+				//if (lastChase != targetLoc)
 				{
 					float DistanceToTarget = FVector::Dist(Start, targetLoc);
-					float ScaledThrust = FMath::Clamp(DistanceToTarget / 1000.0f, -.5f, 0.0f);
+					float ScaledThrust = FMath::Clamp(DistanceToTarget / 1000.0f, 0.f, 0.5f);
 					// - is forward + is back
-					pawn->ThrustInput(ScaledThrust);
+					pawn->ThrustInput(-ScaledThrust);
 				}
 			}
 			pawn->TargetRot = (targetLoc - Start).Rotation();
