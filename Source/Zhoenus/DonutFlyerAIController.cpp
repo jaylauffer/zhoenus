@@ -17,7 +17,7 @@ namespace
 		FVector theChaseBefore{ lastChase };
 		FVector Start{ ship->GetActorLocation() };
 		{
-			if (lastChase != targetLoc)
+			//if (lastChase != targetLoc)
 			{
 				// - is forward + is back
 				ship->ThrustInput(-0.05f);
@@ -122,24 +122,26 @@ static void ReduceAggro(float& Aggro, float PercentDecrease, float DeltaSeconds)
 void ADonutFlyerAIController::Tick(float deltaSeconds)
 {
 	Super::Tick(deltaSeconds);
+	float CurrentTimeSeconds = GetWorld()->GetTimeSeconds();
 	ADonutFlyerPawn* pawn{ Cast<ADonutFlyerPawn>(GetPawn()) };
+	FVector Start{ pawn->GetActorLocation() };
 	//if (GEngine) {
 	//	GEngine->AddOnScreenDebugMessage(4, 15.0f, FColor::White, FString::Printf(TEXT("DonutFlyer: Current State: %d"), currentState));
 	//}
 	switch (currentState)
 	{
 	case IDLE:
-		if (deltaSeconds - currentStateEntered > 2 * 1 / 60)
+		if (CurrentTimeSeconds - currentStateEntered > 2 * 1 / 60)
 		{
 			currentState = SEARCHING;
-			currentStateEntered = deltaSeconds;
+			currentStateEntered = CurrentTimeSeconds;
 			//UE_LOG(LOG_TEST, Log, TEXT("Idle switch to searching"));
 		}
 		break;
 	case SEARCHING:
 		{
 			lastChase.reset();
-			FVector Start{ pawn->GetActorLocation() };
+
 			//FVector End{ Start.X + 1};
 			FCollisionQueryParams CollisionParams;
 			//CollisionParams.AddIgnoredActor(target);
@@ -170,7 +172,7 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 				if (GetTargetPlayer(candidates))
 				{
 					currentState = CHASING;
-					currentStateEntered = deltaSeconds;
+					currentStateEntered = CurrentTimeSeconds;
 					//UE_LOG(LOG_TEST, Log, TEXT("Searching switch to chasing"));
 				}
 				//TODO: add ROAMING state and after a certain period of failed searching being to roam....
@@ -182,7 +184,7 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 		{
 			FVector targetLoc{ target->GetActorLocation() };
 			pawn->DisengageAutoCorrect(0.0f);
-			FVector Start{ pawn->GetActorLocation() };
+
 			FVector ForwardVector{ pawn->GetActorForwardVector() };
 			FVector End{ ((ForwardVector * 450.f) + Start) };
 			FCollisionQueryParams CollisionParams;
@@ -193,7 +195,7 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 			{
 				pawn->ThrustInput(0.0f);
 				currentState = HOVERING;
-				currentStateEntered = deltaSeconds;
+				currentStateEntered = CurrentTimeSeconds;
 				//UE_LOG(LOG_TEST, Log, TEXT("Chasing switch to hovering 1"));
 			}
 			else if (GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECC_WorldDynamic, CollisionParams))
@@ -202,23 +204,31 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 				if (Cast<APawn>(OutHit.GetActor()) == target)
 				{
 					currentState = HOVERING;
-					currentStateEntered = deltaSeconds;
+					currentStateEntered = CurrentTimeSeconds;
 					//UE_LOG(LOG_TEST, Log, TEXT("Chasing switch to hovering 2"));
 				}
-				else if (deltaSeconds - currentStateEntered > 2.f)
+				else if (pawn->GetVelocity().Size() < 1.0f && CurrentTimeSeconds - currentStateEntered > 2.f)
 				{
 					currentState = STUCK;
-					currentStateEntered = deltaSeconds;
+					currentStateEntered = CurrentTimeSeconds;
 					AActor* a{ OutHit.GetActor() };
 					//UE_LOG(LOG_TEST, Log, TEXT("Chasing switch to stuck: %s"), a ? *a->GetName() : TEXT("nullptr"));
+				}
+				else if (Start == PreviousLocation && CurrentTimeSeconds - currentStateEntered > 3.f)
+				{
+					currentState = STUCK;
+					currentStateEntered = CurrentTimeSeconds;
+					//UE_LOG(LOG_TEST, Log, TEXT("Chasing switch to stuck: no movement"));
 				}
 			}
 			else
 			{
 				if (lastChase != targetLoc)
 				{
+					float DistanceToTarget = FVector::Dist(Start, targetLoc);
+					float ScaledThrust = FMath::Clamp(DistanceToTarget / 1000.0f, -.5f, 0.0f);
 					// - is forward + is back
-					pawn->ThrustInput(-0.05f);
+					pawn->ThrustInput(ScaledThrust);
 				}
 			}
 			pawn->TargetRot = (targetLoc - Start).Rotation();
@@ -227,14 +237,14 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 		else
 		{
 			currentState = SEARCHING;
-			currentStateEntered = deltaSeconds;
+			currentStateEntered = CurrentTimeSeconds;
 			//UE_LOG(LOG_TEST, Log, TEXT("Chasing switch to searching"));
 		}
 		break;
 	case HOVERING:
 		if (APawn* target = GetTargetPlayer())
 		{
-			FVector Start{ pawn->GetActorLocation() };
+
 			FVector ForwardVector{ pawn->GetActorForwardVector() };
 			FVector End{ Start + (ForwardVector * 200.f) };
 			FCollisionQueryParams CollisionParams;
@@ -245,7 +255,7 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 			if (Cast<APawn>(OutHit.GetActor()) != target)
 			{
 				currentState = CHASING;
-				currentStateEntered = deltaSeconds;
+				currentStateEntered = CurrentTimeSeconds;
 				AActor* a{ OutHit.GetActor() };
 				//UE_LOG(LOG_TEST, Log, TEXT("Hovering switch to chasing: %s"), a ? *a->GetName() : TEXT("nullptr"));
 			}
@@ -263,7 +273,7 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 		else
 		{
 			currentState = SEARCHING;
-			currentStateEntered = deltaSeconds;
+			currentStateEntered = CurrentTimeSeconds;
 			//UE_LOG(LOG_TEST, Log, TEXT("Hovering switch to searching"));
 		}
 		break;
@@ -273,15 +283,35 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 			lastChase = FVector{};
 		}
 		Chasing(GetPawn<ADonutFlyerPawn>(), LockedLocation, lastChase.value());
+
+		if (CurrentTimeSeconds - currentStateEntered > 2.f && Start == PreviousLocation) {
+			// Velocity-based stuck detection
+			FVector Velocity = GetPawn()->GetVelocity();
+			float Speed = Velocity.Size();
+			if (Speed < 1.f) // If speed is too low, likely stuck
+			{
+				currentState = STUCK;
+				currentStateEntered = CurrentTimeSeconds;
+				UE_LOG(LOG_TEST, Warning, TEXT("LOCKED mode detected low velocity, switching to STUCK."));
+			}
+		}
 		break;
 	case STUCK:
 		//the donutflyer can not reach the target.. because of some obstacle..
 		//this may be because a player is under the "floor" for example
 		//in this case we want the donutflyer to attempt to find a path to the player..
 		//but for now for simplicity we may just accelerate aggro depletion
-		if (APawn* target = GetTargetPlayer())
+		if (LockedTarget)
 		{
-			FVector Start{ pawn->GetActorLocation() };
+			if (CurrentTimeSeconds - currentStateEntered > 8.f)
+			{
+				currentState = LOCKED;
+				currentStateEntered = CurrentTimeSeconds;
+			}
+		}
+		else if (APawn* target = GetTargetPlayer())
+		{
+
 			FVector TargetVector{ target->GetActorLocation() - Start };
 			FVector End{ Start + (TargetVector.Rotation().Quaternion().Vector() * SearchDistance) };
 			FCollisionQueryParams CollisionParams;
@@ -304,18 +334,19 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 			else
 			{
 				currentState = CHASING;
-				currentStateEntered = deltaSeconds;
+				currentStateEntered = CurrentTimeSeconds;
 				UE_LOG(LOG_TEST, Log, TEXT("Stuck switch to chasing"));
 			}
 		}
 		else
 		{
 			currentState = SEARCHING;
-			currentStateEntered = deltaSeconds;
+			currentStateEntered = CurrentTimeSeconds;
 			UE_LOG(LOG_TEST, Log, TEXT("Stuck switch to searching"));
 		}
 	}
 	DecreaseAggro(deltaSeconds);
+	PreviousLocation = Start;
 }
 
 
@@ -342,6 +373,7 @@ APawn* ADonutFlyerAIController::LockTarget(AActor* goal, const FVector &Location
 		LockedTarget = goal;
 		LockedLocation = Location;
 		currentState = LOCKED;
+		currentStateEntered = GetWorld()->GetTimeSeconds();
 		//TODO: assigning locked target should emit some event with the target.. (sparks of joy for example)
 	}
 	return Cast<APawn>(goal); //we give back the goal .. and it may have altered..
@@ -356,5 +388,6 @@ void ADonutFlyerAIController::BeginPlay()
 {
 	Super::BeginPlay(); // Call the parent class's BeginPlay function
 	LockedTarget = nullptr; //always begin with no locked target
+	PreviousLocation = FVector{};
 	// Your initialization code here
 }

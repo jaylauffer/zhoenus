@@ -70,4 +70,5 @@ private:
 	//and expanded to enable more gameplay options, for the first edition, lock target always stays true
 	AActor* LockedTarget;
 	FVector LockedLocation;
+	FVector PreviousLocation;
 };

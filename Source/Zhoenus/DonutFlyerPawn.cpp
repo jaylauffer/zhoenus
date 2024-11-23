@@ -117,6 +117,10 @@ void ADonutFlyerPawn::Tick(float DeltaSeconds)
 					PlaneMesh->SetPhysicsAngularVelocityInDegrees(angle_speed);
 				}
 				break;
+			case ADonutFlyerAIController::STUCK:
+				PlaneMesh->AddForce(FVector(0.f, 0.f, 100.f));
+				break;
+
 			case ADonutFlyerAIController::HOVERING:
 			{
 				if (!FMath::IsNearlyZero(GetVelocity().Size()))
