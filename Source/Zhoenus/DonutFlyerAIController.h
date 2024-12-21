@@ -3,28 +3,30 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Engine/GameEngine.h"
-#include "GameFramework/Pawn.h"
-#include "Kismet/GameplayStatics.h"
-#include <optional>
-
+#include "GameFramework/Controller.h"
+#include "Containers/Map.h"
 #include "DonutFlyerAIController.generated.h"
 
+class ADonutFlyerPawn;
+class ASpaceshipPawn;
+class APlayerController;
+class AZhoenusPlayerState;
+
 /**
- * 
+ *
  */
 UCLASS()
 class ZHOENUS_API ADonutFlyerAIController : public AController
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	ADonutFlyerAIController();
 
 	virtual void Tick(float deltaSeconds) override;
-	APawn * GetTargetPlayer();
-	APawn * GetTargetPlayer(TArray<APawn *> players);
-	APawn* LockTarget(AActor* goal, const FVector &Location);
+	APawn* GetTargetPlayer();
+	APawn* GetTargetPlayer(TArray<APawn*> players);
+	APawn* LockTarget(AActor* goal, const FVector& Location);
 
 	void OnUnPossess() final;
 
@@ -71,4 +73,9 @@ private:
 	AActor* LockedTarget;
 	FVector LockedLocation;
 	FVector PreviousLocation;
+
+	// Position history to detect circling
+	TArray<FVector> PositionHistory;
+	bool IsCircling() const;
+	const float CirclingThreshold = 10000.0f; // Adjust this value as needed
 };
