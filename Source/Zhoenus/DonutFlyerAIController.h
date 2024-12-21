@@ -5,7 +5,10 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Controller.h"
 #include "Containers/Map.h"
+#include <optional>
+
 #include "DonutFlyerAIController.generated.h"
+
 
 class ADonutFlyerPawn;
 class ASpaceshipPawn;

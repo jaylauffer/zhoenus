@@ -249,37 +249,39 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 		}
 		break;
 	case LOCKED:
-		if (!lastChase)
 		{
-			lastChase = FVector{};
-		}
-		FVector targetLoc{ LockedLocation };
-		float DistanceToTarget = FVector::Dist(Start, targetLoc);
-		float ScaledThrust = FMath::Clamp(DistanceToTarget / 1000.0f, 0.f, 0.5f);
-		pawn->ThrustInput(-ScaledThrust);
-		pawn->TargetRot = (targetLoc - Start).Rotation();
-		lastChase = targetLoc;
+			if (!lastChase)
+			{
+				lastChase = FVector{};
+			}
+			FVector targetLoc{ LockedLocation };
+			float DistanceToTarget = FVector::Dist(Start, targetLoc);
+			float ScaledThrust = FMath::Clamp(DistanceToTarget / 1000.0f, 0.f, 0.5f);
+			pawn->ThrustInput(-ScaledThrust);
+			pawn->TargetRot = (targetLoc - Start).Rotation();
+			lastChase = targetLoc;
 
-		// Track position history to detect circling
-		PositionHistory.Add(Start);
-		if (PositionHistory.Num() > 10) // Keep the last 10 positions
-		{
-			PositionHistory.RemoveAt(0);
-		}
+			// Track position history to detect circling
+			PositionHistory.Add(Start);
+			if (PositionHistory.Num() > 10) // Keep the last 10 positions
+			{
+				PositionHistory.RemoveAt(0);
+			}
 
-		// Check if the AI is circling
-		if (IsCircling())
-		{
-			// Adjust movement to break the circling pattern
-			pawn->ThrustInput(0.0f);
-			pawn->MoveRightInput(FMath::RandRange(-1.0f, 1.0f));
-		}
+			// Check if the AI is circling
+			if (IsCircling())
+			{
+				// Adjust movement to break the circling pattern
+				pawn->ThrustInput(0.0f);
+				pawn->MoveRightInput(FMath::RandRange(-1.0f, 1.0f));
+			}
 
-		if (CurrentTimeSeconds - currentStateEntered > 2.f && Start == PreviousLocation)
-		{
-			currentState = STUCK;
-			currentStateEntered = CurrentTimeSeconds;
-			UE_LOG(LOG_TEST, Warning, TEXT("LOCKED mode detected low velocity, switching to STUCK."));
+			if (CurrentTimeSeconds - currentStateEntered > 2.f && Start == PreviousLocation)
+			{
+				currentState = STUCK;
+				currentStateEntered = CurrentTimeSeconds;
+				UE_LOG(LOG_TEST, Warning, TEXT("LOCKED mode detected low velocity, switching to STUCK."));
+			}
 		}
 		break;
 	case STUCK:
