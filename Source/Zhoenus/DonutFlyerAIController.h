@@ -26,7 +26,7 @@ class ZHOENUS_API ADonutFlyerAIController : public AController
 public:
 	ADonutFlyerAIController();
 
-	virtual void Tick(float deltaSeconds) override;
+	//virtual void Tick(float deltaSeconds) override;
 	APawn* GetTargetPlayer();
 	APawn* GetTargetPlayer(TArray<APawn*> players);
 	APawn* LockTarget(AActor* goal, const FVector& Location);
@@ -77,8 +77,29 @@ private:
 	FVector LockedLocation;
 	FVector PreviousLocation;
 
-	// Position history to detect circling
-	TArray<FVector> PositionHistory;
+public:
+	// How many heading samples we keep in memory to compute turn rate.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Circling")
+	int32 MaxYawSamples = 60;
+
+	// Required average degrees per second to consider the flyer "circling."
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Circling")
+	float CirclingTurnRateThresholdDegPerSec = 90.0f;
+
+protected:
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+
+private:
+	// Stores yaw angles in degrees from the last N frames.
+	TArray<float> YawHistory;
+
+	// Stores timestamps for each yaw sample.
+	TArray<float> TimeHistory;
+
+	// Check if circling based on heading changes.
 	bool IsCircling() const;
-	const float CirclingThreshold = 10000.0f; // Adjust this value as needed
+
+	// Helper to keep track of heading over time.
+	void UpdateHeadingHistory(float DeltaTime);
 };

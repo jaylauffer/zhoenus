@@ -123,7 +123,7 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 	float CurrentTimeSeconds = GetWorld()->GetTimeSeconds();
 	ADonutFlyerPawn* pawn{ Cast<ADonutFlyerPawn>(GetPawn()) };
 	FVector Start{ pawn->GetActorLocation() };
-
+	UpdateHeadingHistory(deltaSeconds);
 	switch (currentState)
 	{
 	case IDLE:
@@ -271,13 +271,6 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 				pawn->TargetRot = (LockedLocation - Start).Rotation();
 			}
 
-			// Track position history to detect circling, etc.
-			PositionHistory.Add(Start);
-			if (PositionHistory.Num() > 10)
-			{
-				PositionHistory.RemoveAt(0);
-			}
-
 			if (IsCircling())
 			{
 				// Break circling by stopping thrust momentarily, subtle lateral input
@@ -351,36 +344,76 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 	PreviousLocation = Start;
 }
 
+
+void ADonutFlyerAIController::UpdateHeadingHistory(float DeltaTime)
+{
+	APawn* ControlledPawn = GetPawn();
+	if (!ControlledPawn) return;
+
+	// Get current yaw
+	float CurrentYaw = ControlledPawn->GetActorRotation().Yaw;
+	float CurrentTime = GetWorld()->GetTimeSeconds();
+
+	// Store yaw + time
+	YawHistory.Add(CurrentYaw);
+	TimeHistory.Add(CurrentTime);
+
+	// Keep arrays from growing indefinitely
+	if (YawHistory.Num() > MaxYawSamples)
+	{
+		YawHistory.RemoveAt(0);
+		TimeHistory.RemoveAt(0);
+	}
+}
+
 bool ADonutFlyerAIController::IsCircling() const
 {
-	if (PositionHistory.Num() < 10)
+	// We need at least 2 samples to compute a turn rate
+	if (YawHistory.Num() < 2)
 	{
 		return false;
 	}
 
-	FVector averagePosition = FVector::ZeroVector;
-	for (const FVector& pos : PositionHistory)
-	{
-		averagePosition += pos;
-	}
-	averagePosition /= PositionHistory.Num();
+	// Calculate total heading change (in degrees) and total time
+	float TotalHeadingChange = 0.0f;
+	float TotalTime = 0.0f;
 
-	float variance = 0.0f;
-	for (const FVector& pos : PositionHistory)
+	for (int32 i = 1; i < YawHistory.Num(); ++i)
 	{
-		variance += FVector::DistSquared(pos, averagePosition);
-	}
-	variance /= PositionHistory.Num();
-	// Check if variance is within the threshold
-	bool bIsCircling = (variance < CirclingThreshold);
+		float PrevYaw = YawHistory[i - 1];
+		float CurrentYaw = YawHistory[i];
 
-	// Log only the 'true' condition to avoid spamming the log every tick
-	if (bIsCircling)
+		float DeltaYaw = CurrentYaw - PrevYaw;
+
+		// Yaw differences can wrap around at +/-180.
+		// Normalize so that turning from +179 to -179 is recognized as 2 degrees, not 358.
+		DeltaYaw = FMath::Fmod(DeltaYaw + 180.0f, 360.0f) - 180.0f;
+
+		// Accumulate absolute heading change
+		TotalHeadingChange += FMath::Abs(DeltaYaw);
+
+		// Accumulate time differences
+		float TimeDelta = TimeHistory[i] - TimeHistory[i - 1];
+		TotalTime += TimeDelta;
+	}
+
+	// If we only have 1 time slice, total time is about the last DeltaTime
+	if (TotalTime <= KINDA_SMALL_NUMBER)
 	{
-		UE_LOG(LOG_TEST, Log, TEXT("IsCircling: variance = %f < %f (CirclingThreshold)"), variance, CirclingThreshold);
+		return false;
 	}
 
-	return bIsCircling;
+	// Compute average turn rate in degrees per second
+	float AverageTurnRateDegPerSec = TotalHeadingChange / TotalTime;
+
+	// Compare with threshold
+	if (AverageTurnRateDegPerSec >= CirclingTurnRateThresholdDegPerSec)
+	{
+		// Circling if the flyer is consistently turning at or above the threshold
+		return true;
+	}
+
+	return false;
 }
 
 void ADonutFlyerAIController::DecreaseAggro(float DeltaSeconds)
