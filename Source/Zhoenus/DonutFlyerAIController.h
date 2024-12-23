@@ -78,28 +78,28 @@ private:
 	FVector PreviousLocation;
 
 public:
-	// How many heading samples we keep in memory to compute turn rate.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Circling")
-	int32 MaxYawSamples = 60;
+	// Number of orientation samples we keep.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Circling|Quaternion")
+	int32 MaxQuatSamples = 60;
 
-	// Required average degrees per second to consider the flyer "circling."
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Circling")
-	float CirclingTurnRateThresholdDegPerSec = 90.0f;
+	// Threshold for how many degrees of rotation we consider "one circle."
+	// If we want a full circle = 360 degrees. 
+	// If we only need 75% of a rotation, set something like 270.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Circling|Quaternion")
+	float DegreesThreshold = 360.0f;
 
 protected:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 private:
-	// Stores yaw angles in degrees from the last N frames.
-	TArray<float> YawHistory;
+	// Store orientation quaternions from recent frames
+	TArray<FQuat> QuatHistory;
 
-	// Stores timestamps for each yaw sample.
-	TArray<float> TimeHistory;
+	// Update array with current orientation each tick
+	void UpdateQuatHistory(APawn *Donut);
 
 	// Check if circling based on heading changes.
-	bool IsCircling() const;
+	bool IsCirclingByQuaternions() const;
 
-	// Helper to keep track of heading over time.
-	void UpdateHeadingHistory(float DeltaTime);
 };

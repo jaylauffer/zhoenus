@@ -123,7 +123,7 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 	float CurrentTimeSeconds = GetWorld()->GetTimeSeconds();
 	ADonutFlyerPawn* pawn{ Cast<ADonutFlyerPawn>(GetPawn()) };
 	FVector Start{ pawn->GetActorLocation() };
-	UpdateHeadingHistory(deltaSeconds);
+	UpdateQuatHistory(pawn);
 	switch (currentState)
 	{
 	case IDLE:
@@ -271,7 +271,7 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 				pawn->TargetRot = (LockedLocation - Start).Rotation();
 			}
 
-			if (IsCircling())
+			if (IsCirclingByQuaternions())
 			{
 				// Break circling by stopping thrust momentarily, subtle lateral input
 				pawn->ThrustInput(0.0f);
@@ -344,76 +344,62 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 	PreviousLocation = Start;
 }
 
-
-void ADonutFlyerAIController::UpdateHeadingHistory(float DeltaTime)
+void ADonutFlyerAIController::UpdateQuatHistory(APawn *Donut)
 {
-	APawn* ControlledPawn = GetPawn();
-	if (!ControlledPawn) return;
 
-	// Get current yaw
-	float CurrentYaw = ControlledPawn->GetActorRotation().Yaw;
-	float CurrentTime = GetWorld()->GetTimeSeconds();
+	// Get current orientation as a quaternion
+	FQuat CurrentQuat = Donut->GetActorRotation().Quaternion();
 
-	// Store yaw + time
-	YawHistory.Add(CurrentYaw);
-	TimeHistory.Add(CurrentTime);
+	// Add to our history
+	QuatHistory.Add(CurrentQuat);
 
-	// Keep arrays from growing indefinitely
-	if (YawHistory.Num() > MaxYawSamples)
+	// Keep array size under control
+	if (QuatHistory.Num() > MaxQuatSamples)
 	{
-		YawHistory.RemoveAt(0);
-		TimeHistory.RemoveAt(0);
+		QuatHistory.RemoveAt(0);
 	}
 }
 
-bool ADonutFlyerAIController::IsCircling() const
+bool ADonutFlyerAIController::IsCirclingByQuaternions() const
 {
-	// We need at least 2 samples to compute a turn rate
-	if (YawHistory.Num() < 2)
+	// Need at least 2 quaternions to compare a rotation
+	if (QuatHistory.Num() < 2)
 	{
 		return false;
 	}
 
-	// Calculate total heading change (in degrees) and total time
-	float TotalHeadingChange = 0.0f;
-	float TotalTime = 0.0f;
+	// We'll accumulate rotation in degrees
+	float AccumulatedRotationDeg = 0.0f;
 
-	for (int32 i = 1; i < YawHistory.Num(); ++i)
+	// Iterate over consecutive pairs
+	for (int32 i = 1; i < QuatHistory.Num(); ++i)
 	{
-		float PrevYaw = YawHistory[i - 1];
-		float CurrentYaw = YawHistory[i];
+		const FQuat& PrevQuat = QuatHistory[i - 1];
+		const FQuat& CurrQuat = QuatHistory[i];
 
-		float DeltaYaw = CurrentYaw - PrevYaw;
+		// Relative rotation: Q_diff = Curr * Inverse(Prev)
+		FQuat DiffQuat = CurrQuat * PrevQuat.Inverse();
 
-		// Yaw differences can wrap around at +/-180.
-		// Normalize so that turning from +179 to -179 is recognized as 2 degrees, not 358.
-		DeltaYaw = FMath::Fmod(DeltaYaw + 180.0f, 360.0f) - 180.0f;
+		// Normalize the difference in case of floating point drift
+		DiffQuat.Normalize();
 
-		// Accumulate absolute heading change
-		TotalHeadingChange += FMath::Abs(DeltaYaw);
+		// Convert DiffQuat to an axis and angle
+		// angle is in radians, axis is a unit vector
+		FVector Axis;
+		float AngleRad;
+		DiffQuat.ToAxisAndAngle(Axis, AngleRad);
 
-		// Accumulate time differences
-		float TimeDelta = TimeHistory[i] - TimeHistory[i - 1];
-		TotalTime += TimeDelta;
+		// Convert to degrees
+		float AngleDeg = FMath::RadiansToDegrees(AngleRad);
+
+		// For total rotation in 3D, just accumulate the absolute angle
+		// (This does NOT distinguish direction or axis—any rotation counts.)
+		AccumulatedRotationDeg += AngleDeg;
 	}
 
-	// If we only have 1 time slice, total time is about the last DeltaTime
-	if (TotalTime <= KINDA_SMALL_NUMBER)
-	{
-		return false;
-	}
-
-	// Compute average turn rate in degrees per second
-	float AverageTurnRateDegPerSec = TotalHeadingChange / TotalTime;
-
-	// Compare with threshold
-	if (AverageTurnRateDegPerSec >= CirclingTurnRateThresholdDegPerSec)
-	{
-		// Circling if the flyer is consistently turning at or above the threshold
-		return true;
-	}
-
-	return false;
+	// If the total rotation across these samples exceeds our threshold
+	// (e.g., 360 deg = a full revolution), consider it circling
+	return AccumulatedRotationDeg >= DegreesThreshold;
 }
 
 void ADonutFlyerAIController::DecreaseAggro(float DeltaSeconds)
