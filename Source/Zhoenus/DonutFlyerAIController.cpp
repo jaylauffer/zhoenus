@@ -167,56 +167,60 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 	}
 	break;
 	case CHASING:
+	{
 		if (APawn* target = GetTargetPlayer())
 		{
-			FVector targetLoc{ target->GetActorLocation() };
-			pawn->DisengageAutoCorrect(0.0f);
+			// Check if target is a spaceship (i.e. a player's ship)
+			if (ASpaceshipPawn* spaceshipTarget = Cast<ASpaceshipPawn>(target))
+			{
+				// ================
+				//  GENTLE APPROACH
+				// ================
+				pawn->DisengageAutoCorrect(0.0f);
 
-			FVector ForwardVector{ pawn->GetActorForwardVector() };
-			FVector End{ ((ForwardVector * 450.f) + Start) };
-			FCollisionQueryParams CollisionParams;
-			CollisionParams.AddIgnoredActor(pawn);
-			FHitResult OutHit;
-			if (pawn->GetDistanceTo(target) < 300.f)
-			{
-				pawn->ThrustInput(0.0f);
-				currentState = HOVERING;
-				currentStateEntered = CurrentTimeSeconds;
-			}
-			else if (GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECC_WorldDynamic, CollisionParams))
-			{
-				pawn->ThrustInput(0.0f);
-				if (Cast<APawn>(OutHit.GetActor()) == target)
+				float distance = pawn->GetDistanceTo(spaceshipTarget);
+				if (distance < 300.f)
 				{
+					// If close to a player's ship, hover
+					pawn->ThrustInput(0.0f);
 					currentState = HOVERING;
 					currentStateEntered = CurrentTimeSeconds;
 				}
-				else if (pawn->GetVelocity().Size() < 1.0f && CurrentTimeSeconds - currentStateEntered > 2.f)
+				else
 				{
-					currentState = STUCK;
-					currentStateEntered = CurrentTimeSeconds;
-				}
-				else if (Start == PreviousLocation && CurrentTimeSeconds - currentStateEntered > 3.f)
-				{
-					currentState = STUCK;
-					currentStateEntered = CurrentTimeSeconds;
+					// Gentle forward thrust (negative is forward in your code)
+					float DistanceFactor = distance / 2000.0f;
+					float MaxForwardThrust = 0.25f;
+					float ThrustValue = -FMath::Clamp(DistanceFactor, 0.f, MaxForwardThrust);
+					pawn->ThrustInput(ThrustValue);
+
+					// Rotate toward the target
+					pawn->TargetRot = (spaceshipTarget->GetActorLocation() - Start).Rotation();
 				}
 			}
 			else
 			{
-				float DistanceToTarget = FVector::Dist(Start, targetLoc);
-				float ScaledThrust = FMath::Clamp(DistanceToTarget / 1000.0f, 0.f, 0.5f);
-				pawn->ThrustInput(-ScaledThrust);
+				// ==================
+				//  NON-PLAYER TARGET
+				// ==================
+				// e.g. Gate of Oblivion (AGoal)
+				// Move at full speed, do not hover
+				float FullSpeed = -1.0f;  // negative is forward
+				pawn->ThrustInput(FullSpeed);
+
+				pawn->TargetRot = (target->GetActorLocation() - Start).Rotation();
 			}
-			pawn->TargetRot = (targetLoc - Start).Rotation();
-			lastChase = targetLoc;
+
+			lastChase = target->GetActorLocation();
 		}
 		else
 		{
 			currentState = SEARCHING;
 			currentStateEntered = CurrentTimeSeconds;
 		}
-		break;
+	}
+	break;
+
 	case HOVERING:
 		if (APawn* target = GetTargetPlayer())
 		{
@@ -249,33 +253,39 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 		}
 		break;
 	case LOCKED:
+	{
+		if (!lastChase)
 		{
-			if (!lastChase)
-			{
-				lastChase = FVector{};
-			}
-			FVector targetLoc{ LockedLocation };
-			float DistanceToTarget = FVector::Dist(Start, targetLoc);
-			float ScaledThrust = FMath::Clamp(DistanceToTarget / 1000.0f, 0.f, 0.5f);
-			pawn->ThrustInput(-ScaledThrust);
-			pawn->TargetRot = (targetLoc - Start).Rotation();
-			lastChase = targetLoc;
+			lastChase = FVector{};
+		}
 
-			// Track position history to detect circling
+		if (LockedTarget) // We have a locked target
+		{
+			{
+				// ==============
+				//  NON-PLAYER
+				// ==============
+				// e.g., Gate of Oblivion
+				// Use full speed for locked non-player targets
+				pawn->ThrustInput(-1.0f);
+				pawn->TargetRot = (LockedLocation - Start).Rotation();
+			}
+
+			// Track position history to detect circling, etc.
 			PositionHistory.Add(Start);
-			if (PositionHistory.Num() > 10) // Keep the last 10 positions
+			if (PositionHistory.Num() > 10)
 			{
 				PositionHistory.RemoveAt(0);
 			}
 
-			// Check if the AI is circling
 			if (IsCircling())
 			{
-				// Adjust movement to break the circling pattern
+				// Break circling by stopping thrust momentarily, subtle lateral input
 				pawn->ThrustInput(0.0f);
-				pawn->MoveRightInput(FMath::RandRange(-1.0f, 1.0f));
+				pawn->MoveRightInput(FMath::RandRange(-0.2f, 0.2f));
 			}
 
+			// If stuck
 			if (CurrentTimeSeconds - currentStateEntered > 2.f && Start == PreviousLocation)
 			{
 				currentState = STUCK;
@@ -283,7 +293,17 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 				UE_LOG(LOG_TEST, Warning, TEXT("LOCKED mode detected low velocity, switching to STUCK."));
 			}
 		}
-		break;
+		else
+		{
+			// If no LockedTarget anymore, revert to searching or some default
+			currentState = SEARCHING;
+			currentStateEntered = CurrentTimeSeconds;
+		}
+
+		lastChase = LockedLocation;
+	}
+	break;
+
 	case STUCK:
 		if (LockedTarget)
 		{
@@ -351,8 +371,16 @@ bool ADonutFlyerAIController::IsCircling() const
 		variance += FVector::DistSquared(pos, averagePosition);
 	}
 	variance /= PositionHistory.Num();
+	// Check if variance is within the threshold
+	bool bIsCircling = (variance < CirclingThreshold);
 
-	return variance < CirclingThreshold;
+	// Log only the 'true' condition to avoid spamming the log every tick
+	if (bIsCircling)
+	{
+		UE_LOG(LOG_TEST, Log, TEXT("IsCircling: variance = %f < %f (CirclingThreshold)"), variance, CirclingThreshold);
+	}
+
+	return bIsCircling;
 }
 
 void ADonutFlyerAIController::DecreaseAggro(float DeltaSeconds)
