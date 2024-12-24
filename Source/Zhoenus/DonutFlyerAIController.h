@@ -3,28 +3,33 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Engine/GameEngine.h"
-#include "GameFramework/Pawn.h"
-#include "Kismet/GameplayStatics.h"
+#include "GameFramework/Controller.h"
+#include "Containers/Map.h"
 #include <optional>
 
 #include "DonutFlyerAIController.generated.h"
 
+
+class ADonutFlyerPawn;
+class ASpaceshipPawn;
+class APlayerController;
+class AZhoenusPlayerState;
+
 /**
- * 
+ *
  */
 UCLASS()
 class ZHOENUS_API ADonutFlyerAIController : public AController
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	ADonutFlyerAIController();
 
-	virtual void Tick(float deltaSeconds) override;
-	APawn * GetTargetPlayer();
-	APawn * GetTargetPlayer(TArray<APawn *> players);
-	APawn* LockTarget(AActor* goal, const FVector &Location);
+	//virtual void Tick(float deltaSeconds) override;
+	APawn* GetTargetPlayer();
+	APawn* GetTargetPlayer(TArray<APawn*> players);
+	APawn* LockTarget(AActor* goal, const FVector& Location);
 
 	void OnUnPossess() final;
 
@@ -70,4 +75,31 @@ private:
 	//and expanded to enable more gameplay options, for the first edition, lock target always stays true
 	AActor* LockedTarget;
 	FVector LockedLocation;
+	FVector PreviousLocation;
+
+public:
+	// Number of orientation samples we keep.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Circling|Quaternion")
+	int32 MaxQuatSamples = 60;
+
+	// Threshold for how many degrees of rotation we consider "one circle."
+	// If we want a full circle = 360 degrees. 
+	// If we only need 75% of a rotation, set something like 270.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Circling|Quaternion")
+	float DegreesThreshold = 360.0f;
+
+protected:
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+
+private:
+	// Store orientation quaternions from recent frames
+	TArray<FQuat> QuatHistory;
+
+	// Update array with current orientation each tick
+	void UpdateQuatHistory(APawn *Donut);
+
+	// Check if circling based on heading changes.
+	bool IsCirclingByQuaternions() const;
+
 };

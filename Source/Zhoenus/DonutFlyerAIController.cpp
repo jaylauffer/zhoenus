@@ -10,24 +10,22 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LOG_TEST, Log, All);
 
-namespace 
+namespace
 {
-	static FVector Chasing(ADonutFlyerPawn* ship, const FVector & targetLoc, FVector &lastChase)
+	static FVector Chasing(ADonutFlyerPawn* ship, const FVector& targetLoc, FVector& lastChase)
 	{
 		FVector theChaseBefore{ lastChase };
 		FVector Start{ ship->GetActorLocation() };
-		{
-			if (lastChase != targetLoc)
-			{
-				// - is forward + is back
-				ship->ThrustInput(-0.05f);
-			}
-		}
+		float DistanceToTarget = FVector::Dist(Start, targetLoc);
+
+		// Reduce thrust input as the flyer gets closer to the target
+		float ScaledThrust = FMath::Clamp(DistanceToTarget / 1000.0f, 0.f, 0.5f);
+		ship->ThrustInput(-ScaledThrust);
+
 		ship->TargetRot = (targetLoc - Start).Rotation();
 		lastChase = targetLoc;
 		return theChaseBefore;
 	}
-
 }
 
 ADonutFlyerAIController::ADonutFlyerAIController()
@@ -122,138 +120,126 @@ static void ReduceAggro(float& Aggro, float PercentDecrease, float DeltaSeconds)
 void ADonutFlyerAIController::Tick(float deltaSeconds)
 {
 	Super::Tick(deltaSeconds);
+	float CurrentTimeSeconds = GetWorld()->GetTimeSeconds();
 	ADonutFlyerPawn* pawn{ Cast<ADonutFlyerPawn>(GetPawn()) };
-	//if (GEngine) {
-	//	GEngine->AddOnScreenDebugMessage(4, 15.0f, FColor::White, FString::Printf(TEXT("DonutFlyer: Current State: %d"), currentState));
-	//}
+	FVector Start{ pawn->GetActorLocation() };
+	UpdateQuatHistory(pawn);
 	switch (currentState)
 	{
 	case IDLE:
-		if (deltaSeconds - currentStateEntered > 2 * 1 / 60)
+		if (CurrentTimeSeconds - currentStateEntered > 2 * 1 / 60)
 		{
 			currentState = SEARCHING;
-			currentStateEntered = deltaSeconds;
-			//UE_LOG(LOG_TEST, Log, TEXT("Idle switch to searching"));
+			currentStateEntered = CurrentTimeSeconds;
 		}
 		break;
 	case SEARCHING:
+	{
+		lastChase.reset();
+		FCollisionQueryParams CollisionParams;
+		CollisionParams.AddIgnoredActor(pawn);
+		TArray<FOverlapResult> overlaps;
+		TArray<APawn*> candidates{};
+		if (GetWorld()->OverlapMultiByChannel(overlaps, Start, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(SearchDistance), CollisionParams))
 		{
-			lastChase.reset();
-			FVector Start{ pawn->GetActorLocation() };
-			//FVector End{ Start.X + 1};
-			FCollisionQueryParams CollisionParams;
-			//CollisionParams.AddIgnoredActor(target);
-			CollisionParams.AddIgnoredActor(pawn);
-			TArray<FOverlapResult> overlaps;
-			TArray<APawn *> candidates{};
-			if (GetWorld()->OverlapMultiByChannel(overlaps, Start, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(SearchDistance), CollisionParams))
+			for (auto& ov : overlaps)
 			{
-				//for now we take the first Zhoenus Pawn we find... 
-				for(auto &ov : overlaps)
+				if (ov.GetActor()->IsA<ASpaceshipPawn>())
 				{
-					if (ov.GetActor()->IsA<ASpaceshipPawn>())
+					FHitResult hit{};
+					if (GetWorld()->LineTraceSingleByChannel(hit, Start, ov.GetActor()->GetActorLocation(), ECC_WorldDynamic, CollisionParams))
 					{
-						FHitResult hit{};
-						//TODO: make a series of line traces (in case target is partially visible)
-						if (GetWorld()->LineTraceSingleByChannel(hit, Start, ov.GetActor()->GetActorLocation(), ECC_WorldDynamic, CollisionParams))
+						if (auto ZhoenusPawn = Cast<ASpaceshipPawn>(hit.GetActor()))
 						{
-							if (auto ZhoenusPawn = Cast<ASpaceshipPawn>(hit.GetActor()))
-							{
-								auto &ps = AggroMap.FindOrAdd(ZhoenusPawn);
-								ps.SeenAggro += 3.f + ((SearchDistance - hit.Distance) / SearchDistance);
-								//UE_LOG(LOG_TEST, Log, TEXT("Seen player: %g - %g - %g, %s"), ps.BumpAggro, ps.ShotAggro, ps.SeenAggro, *pc.GetName());
-								candidates.Push(ZhoenusPawn);
-							}
+							auto& ps = AggroMap.FindOrAdd(ZhoenusPawn);
+							ps.SeenAggro += 3.f + ((SearchDistance - hit.Distance) / SearchDistance);
+							candidates.Push(ZhoenusPawn);
 						}
 					}
 				}
-				if (GetTargetPlayer(candidates))
-				{
-					currentState = CHASING;
-					currentStateEntered = deltaSeconds;
-					//UE_LOG(LOG_TEST, Log, TEXT("Searching switch to chasing"));
-				}
-				//TODO: add ROAMING state and after a certain period of failed searching being to roam....
+			}
+			if (GetTargetPlayer(candidates))
+			{
+				currentState = CHASING;
+				currentStateEntered = CurrentTimeSeconds;
 			}
 		}
-		break;
+	}
+	break;
 	case CHASING:
-		if (APawn *target = GetTargetPlayer())
+	{
+		if (APawn* target = GetTargetPlayer())
 		{
-			FVector targetLoc{ target->GetActorLocation() };
-			pawn->DisengageAutoCorrect(0.0f);
-			FVector Start{ pawn->GetActorLocation() };
-			FVector ForwardVector{ pawn->GetActorForwardVector() };
-			FVector End{ ((ForwardVector * 450.f) + Start) };
-			FCollisionQueryParams CollisionParams;
-			//CollisionParams.AddIgnoredActor(target);
-			CollisionParams.AddIgnoredActor(pawn);
-			FHitResult OutHit;
-			if (pawn->GetDistanceTo(target) < 300.f)
+			// Check if target is a spaceship (i.e. a player's ship)
+			if (ASpaceshipPawn* spaceshipTarget = Cast<ASpaceshipPawn>(target))
 			{
-				pawn->ThrustInput(0.0f);
-				currentState = HOVERING;
-				currentStateEntered = deltaSeconds;
-				//UE_LOG(LOG_TEST, Log, TEXT("Chasing switch to hovering 1"));
-			}
-			else if (GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECC_WorldDynamic, CollisionParams))
-			{
-				pawn->ThrustInput(0.0f);
-				if (Cast<APawn>(OutHit.GetActor()) == target)
+				// ================
+				//  GENTLE APPROACH
+				// ================
+				pawn->DisengageAutoCorrect(0.0f);
+
+				float distance = pawn->GetDistanceTo(spaceshipTarget);
+				if (distance < 300.f)
 				{
+					// If close to a player's ship, hover
+					pawn->ThrustInput(0.0f);
 					currentState = HOVERING;
-					currentStateEntered = deltaSeconds;
-					//UE_LOG(LOG_TEST, Log, TEXT("Chasing switch to hovering 2"));
+					currentStateEntered = CurrentTimeSeconds;
 				}
-				else if (deltaSeconds - currentStateEntered > 2.f)
+				else
 				{
-					currentState = STUCK;
-					currentStateEntered = deltaSeconds;
-					AActor* a{ OutHit.GetActor() };
-					//UE_LOG(LOG_TEST, Log, TEXT("Chasing switch to stuck: %s"), a ? *a->GetName() : TEXT("nullptr"));
+					// Gentle forward thrust (negative is forward in your code)
+					float DistanceFactor = distance / 2000.0f;
+					float MaxForwardThrust = 0.25f;
+					float ThrustValue = -FMath::Clamp(DistanceFactor, 0.f, MaxForwardThrust);
+					pawn->ThrustInput(ThrustValue);
+
+					// Rotate toward the target
+					pawn->TargetRot = (spaceshipTarget->GetActorLocation() - Start).Rotation();
 				}
 			}
 			else
 			{
-				if (lastChase != targetLoc)
-				{
-					// - is forward + is back
-					pawn->ThrustInput(-0.05f);
-				}
+				// ==================
+				//  NON-PLAYER TARGET
+				// ==================
+				// e.g. Gate of Oblivion (AGoal)
+				// Move at full speed, do not hover
+				float FullSpeed = -1.0f;  // negative is forward
+				pawn->ThrustInput(FullSpeed);
+
+				pawn->TargetRot = (target->GetActorLocation() - Start).Rotation();
 			}
-			pawn->TargetRot = (targetLoc - Start).Rotation();
-			lastChase = targetLoc;
+
+			lastChase = target->GetActorLocation();
 		}
 		else
 		{
 			currentState = SEARCHING;
-			currentStateEntered = deltaSeconds;
-			//UE_LOG(LOG_TEST, Log, TEXT("Chasing switch to searching"));
+			currentStateEntered = CurrentTimeSeconds;
 		}
-		break;
+	}
+	break;
+
 	case HOVERING:
 		if (APawn* target = GetTargetPlayer())
 		{
-			FVector Start{ pawn->GetActorLocation() };
 			FVector ForwardVector{ pawn->GetActorForwardVector() };
 			FVector End{ Start + (ForwardVector * 200.f) };
 			FCollisionQueryParams CollisionParams;
-			//CollisionParams.AddIgnoredActor(target);
 			CollisionParams.AddIgnoredActor(pawn);
 			FHitResult OutHit;
 			GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECC_WorldDynamic, CollisionParams);
 			if (Cast<APawn>(OutHit.GetActor()) != target)
 			{
 				currentState = CHASING;
-				currentStateEntered = deltaSeconds;
-				AActor* a{ OutHit.GetActor() };
-				//UE_LOG(LOG_TEST, Log, TEXT("Hovering switch to chasing: %s"), a ? *a->GetName() : TEXT("nullptr"));
+				currentStateEntered = CurrentTimeSeconds;
 			}
 			else if (pawn->GetDistanceTo(target) < 300.f)
 			{
 				pawn->DisengageAutoCorrect(10.0f);
 			}
-			else 
+			else
 			{
 				pawn->DisengageAutoCorrect(0.0f);
 			}
@@ -263,29 +249,68 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 		else
 		{
 			currentState = SEARCHING;
-			currentStateEntered = deltaSeconds;
-			//UE_LOG(LOG_TEST, Log, TEXT("Hovering switch to searching"));
+			currentStateEntered = CurrentTimeSeconds;
 		}
 		break;
 	case LOCKED:
+	{
 		if (!lastChase)
 		{
 			lastChase = FVector{};
 		}
-		Chasing(GetPawn<ADonutFlyerPawn>(), LockedLocation, lastChase.value());
-		break;
-	case STUCK:
-		//the donutflyer can not reach the target.. because of some obstacle..
-		//this may be because a player is under the "floor" for example
-		//in this case we want the donutflyer to attempt to find a path to the player..
-		//but for now for simplicity we may just accelerate aggro depletion
-		if (APawn* target = GetTargetPlayer())
+
+		if (LockedTarget) // We have a locked target
 		{
-			FVector Start{ pawn->GetActorLocation() };
+			{
+				// ==============
+				//  NON-PLAYER
+				// ==============
+				// e.g., Gate of Oblivion
+				// Use full speed for locked non-player targets
+				pawn->ThrustInput(-1.0f);
+				pawn->TargetRot = (LockedLocation - Start).Rotation();
+			}
+
+			if (IsCirclingByQuaternions())
+			{
+				// Break circling by stopping thrust momentarily, subtle lateral input
+				pawn->ThrustInput(0.0f);
+				pawn->MoveRightInput(FMath::RandRange(-0.2f, 0.2f));
+			}
+
+			// If stuck
+			if (CurrentTimeSeconds - currentStateEntered > 2.f && Start == PreviousLocation)
+			{
+				currentState = STUCK;
+				currentStateEntered = CurrentTimeSeconds;
+				UE_LOG(LOG_TEST, Warning, TEXT("LOCKED mode detected low velocity, switching to STUCK."));
+			}
+		}
+		else
+		{
+			// If no LockedTarget anymore, revert to searching or some default
+			currentState = SEARCHING;
+			currentStateEntered = CurrentTimeSeconds;
+		}
+
+		lastChase = LockedLocation;
+	}
+	break;
+
+	case STUCK:
+		if (LockedTarget)
+		{
+			if (CurrentTimeSeconds - currentStateEntered > 8.f)
+			{
+				currentState = LOCKED;
+				currentStateEntered = CurrentTimeSeconds;
+			}
+		}
+		else if (APawn* target = GetTargetPlayer())
+		{
 			FVector TargetVector{ target->GetActorLocation() - Start };
 			FVector End{ Start + (TargetVector.Rotation().Quaternion().Vector() * SearchDistance) };
 			FCollisionQueryParams CollisionParams;
-			//CollisionParams.AddIgnoredActor(target);
 			CollisionParams.AddIgnoredActor(pawn);
 			FHitResult OutHit;
 			GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECC_WorldDynamic, CollisionParams);
@@ -304,21 +329,78 @@ void ADonutFlyerAIController::Tick(float deltaSeconds)
 			else
 			{
 				currentState = CHASING;
-				currentStateEntered = deltaSeconds;
+				currentStateEntered = CurrentTimeSeconds;
 				UE_LOG(LOG_TEST, Log, TEXT("Stuck switch to chasing"));
 			}
 		}
 		else
 		{
 			currentState = SEARCHING;
-			currentStateEntered = deltaSeconds;
+			currentStateEntered = CurrentTimeSeconds;
 			UE_LOG(LOG_TEST, Log, TEXT("Stuck switch to searching"));
 		}
 	}
 	DecreaseAggro(deltaSeconds);
+	PreviousLocation = Start;
 }
 
+void ADonutFlyerAIController::UpdateQuatHistory(APawn *Donut)
+{
 
+	// Get current orientation as a quaternion
+	FQuat CurrentQuat = Donut->GetActorRotation().Quaternion();
+
+	// Add to our history
+	QuatHistory.Add(CurrentQuat);
+
+	// Keep array size under control
+	if (QuatHistory.Num() > MaxQuatSamples)
+	{
+		QuatHistory.RemoveAt(0);
+	}
+}
+
+bool ADonutFlyerAIController::IsCirclingByQuaternions() const
+{
+	// Need at least 2 quaternions to compare a rotation
+	if (QuatHistory.Num() < 2)
+	{
+		return false;
+	}
+
+	// We'll accumulate rotation in degrees
+	float AccumulatedRotationDeg = 0.0f;
+
+	// Iterate over consecutive pairs
+	for (int32 i = 1; i < QuatHistory.Num(); ++i)
+	{
+		const FQuat& PrevQuat = QuatHistory[i - 1];
+		const FQuat& CurrQuat = QuatHistory[i];
+
+		// Relative rotation: Q_diff = Curr * Inverse(Prev)
+		FQuat DiffQuat = CurrQuat * PrevQuat.Inverse();
+
+		// Normalize the difference in case of floating point drift
+		DiffQuat.Normalize();
+
+		// Convert DiffQuat to an axis and angle
+		// angle is in radians, axis is a unit vector
+		FVector Axis;
+		float AngleRad;
+		DiffQuat.ToAxisAndAngle(Axis, AngleRad);
+
+		// Convert to degrees
+		float AngleDeg = FMath::RadiansToDegrees(AngleRad);
+
+		// For total rotation in 3D, just accumulate the absolute angle
+		// (This does NOT distinguish direction or axis—any rotation counts.)
+		AccumulatedRotationDeg += AngleDeg;
+	}
+
+	// If the total rotation across these samples exceeds our threshold
+	// (e.g., 360 deg = a full revolution), consider it circling
+	return AccumulatedRotationDeg >= DegreesThreshold;
+}
 
 void ADonutFlyerAIController::DecreaseAggro(float DeltaSeconds)
 {
@@ -342,6 +424,7 @@ APawn* ADonutFlyerAIController::LockTarget(AActor* goal, const FVector &Location
 		LockedTarget = goal;
 		LockedLocation = Location;
 		currentState = LOCKED;
+		currentStateEntered = GetWorld()->GetTimeSeconds();
 		//TODO: assigning locked target should emit some event with the target.. (sparks of joy for example)
 	}
 	return Cast<APawn>(goal); //we give back the goal .. and it may have altered..
@@ -356,5 +439,6 @@ void ADonutFlyerAIController::BeginPlay()
 {
 	Super::BeginPlay(); // Call the parent class's BeginPlay function
 	LockedTarget = nullptr; //always begin with no locked target
+	PreviousLocation = FVector{};
 	// Your initialization code here
 }

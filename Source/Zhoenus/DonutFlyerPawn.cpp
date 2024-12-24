@@ -37,6 +37,9 @@ ADonutFlyerPawn::ADonutFlyerPawn()
 	PlaneMesh->SetStaticMesh(ConstructorStatics.PlaneMesh.Get());	// Set static mesh
 	PlaneMesh->BodyInstance.bSimulatePhysics = true;
 	PlaneMesh->BodyInstance.bEnableGravity = false;
+	//don't cause camera swingarms to jump
+	PlaneMesh->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+
 	//PlaneMesh->SetAngularDamping(1.f);
 	//PlaneMesh->SetLinearDamping(1.f);
 	RootComponent = PlaneMesh;
@@ -117,6 +120,10 @@ void ADonutFlyerPawn::Tick(float DeltaSeconds)
 					PlaneMesh->SetPhysicsAngularVelocityInDegrees(angle_speed);
 				}
 				break;
+			case ADonutFlyerAIController::STUCK:
+				PlaneMesh->AddForce(FVector(0.f, 0.f, 100.f));
+				break;
+
 			case ADonutFlyerAIController::HOVERING:
 			{
 				if (!FMath::IsNearlyZero(GetVelocity().Size()))
@@ -159,7 +166,7 @@ void ADonutFlyerPawn::NotifyHit(class UPrimitiveComponent* MyComp, class AActor*
 			AZhoenusPlayerState* ps = pawn->GetPlayerState<AZhoenusPlayerState>();
 			if (ps != nullptr)
 			{
-				ps->OnDonutHitFromMe(push.Size());
+				ps->OnDonutHitFromMe(push.Size() *.125);
 			}
 		}
 	}
