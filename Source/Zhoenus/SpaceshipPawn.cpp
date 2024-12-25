@@ -253,7 +253,9 @@ void ASpaceshipPawn::PitchInput(const FInputActionValue& Value)
 void ASpaceshipPawn::YawInput(const FInputActionValue& Value)
 {
 	float Yaw = Value.Get<float>();
-	CachedInput.Y = FMath::Clamp(Yaw, -1.f, 1.f);
+	float ClampedYaw = FMath::Clamp(Yaw, -1.f, 1.f);
+	ScreenDebug2(FString::Printf(TEXT("Raw Yaw %g - Clamped Yaw: %g"), Yaw, ClampedYaw));
+	CachedInput.Y = ClampedYaw;
 }
 
 void ASpaceshipPawn::RollInput(const FInputActionValue& Value)

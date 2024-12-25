@@ -7,10 +7,18 @@
 #include "Blueprint/UserWidget.h"
 #include "SpaceshipPawn.h"
 
+#define ON_SCREEN_DEBUG 1
+#ifdef ON_SCREEN_DEBUG
+#include <Runtime/Engine/Classes/Engine/Engine.h>
+#define ScreenDebug3(text) if(GEngine)GEngine->AddOnScreenDebugMessage(-1, 1.5, FColor::Yellow, text)
+#else
+#define ScreenDebug3(text) 
+#endif
+
 namespace
 {
 	const FLinearColor PitchColor(1.f, 0.f, 1.f);
-	const FLinearColor YawColor(0.5f, 1.f, 0.5f);
+	const FLinearColor YawColor(0.05f, 1.f, 0.05f, 0.42f);
 	const FLinearColor RollColor(.3f, 0, 1.f);
 	const FLinearColor StabilizeColor(.7f, 0, .5f);
 }
@@ -113,12 +121,14 @@ void ASpaceshipHUD::DrawHUD()
 		double Yaw{ -pawn->CachedInput.Y };
 		if (Yaw > 0.02f)
 		{
-			FVector2D e{ -Yaw * Canvas->ClipX * .6f, 10.f };
+			ScreenDebug3(FString::Printf(TEXT("Yaw %g"), Yaw));
+			FVector2D e{ -Yaw * Canvas->ClipX * .6f, 20.f };
 			DrawRect(YawColor, y.X, y.Y, e.X, e.Y);
 		}
 		else if (Yaw < -0.02f)
 		{
-			FVector2D e{ -Yaw * Canvas->ClipY * .6f, 10.f };
+			ScreenDebug3(FString::Printf(TEXT("Yaw %g"), Yaw));
+			FVector2D e{ -Yaw * Canvas->ClipX * .6f, 20.f };
 			DrawRect(YawColor, y.X, y.Y, e.X, e.Y);
 		}
 
