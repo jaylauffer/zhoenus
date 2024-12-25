@@ -166,7 +166,7 @@ void ADonutFlyerPawn::NotifyHit(class UPrimitiveComponent* MyComp, class AActor*
 			AZhoenusPlayerState* ps = pawn->GetPlayerState<AZhoenusPlayerState>();
 			if (ps != nullptr)
 			{
-				ps->OnDonutHitFromMe(push.Size() *.125);
+				ps->OnDonutHitFromMe(push.Size() *.07125);
 			}
 		}
 	}
