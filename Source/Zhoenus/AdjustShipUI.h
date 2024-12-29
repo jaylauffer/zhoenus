@@ -1,18 +1,18 @@
 #pragma once
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "CommonActivatableWidget.h"
 #include "AdjustShipUI.generated.h"
 
 UCLASS()
-class UAdjustShipUI : public UUserWidget
+class UAdjustShipUI : public UCommonActivatableWidget
 {
 	GENERATED_BODY()
 
 public:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	class UButton* Return;
+	class UCommonButtonBase* BackButton;
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	class UButton* Save;
+	class UCommonButtonBase* SaveButton;
 
 	UAdjustShipUI(const FObjectInitializer& ObjectInitializer);
 

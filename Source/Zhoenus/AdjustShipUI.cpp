@@ -1,6 +1,6 @@
 #include "AdjustShipUI.h"
 
-UAdjustShipUI::UZhoenusTouchUI(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+UAdjustShipUI::UAdjustShipUI(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 }
 
