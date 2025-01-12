@@ -10,9 +10,9 @@ class UAdjustShipUI : public UCommonActivatableWidget
 
 public:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	class UCommonButtonBase* BackButton;
+	class UCommonButtonBase* ZhoenusBackButton;
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	class UCommonButtonBase* SaveButton;
+	class UCommonButtonBase* ZhoenusSaveButton;
 
 	UAdjustShipUI(const FObjectInitializer& ObjectInitializer);
 
