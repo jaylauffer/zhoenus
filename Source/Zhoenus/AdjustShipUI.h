@@ -14,6 +14,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	class UCommonButtonBase* ZhoenusSaveButton;
 
+//	UFUNCTION()
+
 	UAdjustShipUI(const FObjectInitializer& ObjectInitializer);
 
 	virtual void NativeConstruct() override;
