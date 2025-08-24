@@ -14,10 +14,8 @@ class AZhoenusSoccerGameState : public AGameStateBase
 public:
 	AZhoenusSoccerGameState();
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	UPROPERTY(Replicated, BlueprintReadWrite)
-	TArray<int32> Score;
+        UPROPERTY(BlueprintReadWrite)
+        TArray<int32> Score;
 };
 
 

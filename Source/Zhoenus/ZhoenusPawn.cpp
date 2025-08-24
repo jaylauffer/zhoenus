@@ -19,7 +19,6 @@
 #include "Engine/StaticMesh.h"
 #include "Sound/SoundBase.h"
 #include "DrawDebugHelpers.h"
-#include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 
@@ -73,7 +72,6 @@ AZhoenusPawn::AZhoenusPawn(const FObjectInitializer &initializer) : Super(initia
 	HeadLight->SetIndirectLightingIntensity(10000.f);
 
 
-	bReplicates = true;
 }
 
 void AZhoenusPawn::BeginPlay()

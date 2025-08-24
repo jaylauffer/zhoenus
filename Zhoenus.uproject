@@ -29,10 +29,6 @@
 			"Enabled": false
 		},
 		{
-			"Name": "NetworkPrediction",
-			"Enabled": true
-		},
-		{
 			"Name": "RuntimePhysXCooking",
 			"Enabled": false
 		},
@@ -67,10 +63,6 @@
 		{
 			"Name": "KDevelopSourceCodeAccess",
 			"Enabled": false
-		},
-		{
-			"Name": "NetworkPredictionInsights",
-			"Enabled": true
 		},
 		{
 			"Name": "NiagaraFluids",

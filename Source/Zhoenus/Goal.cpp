@@ -27,39 +27,31 @@ void AGoal::BeginPlay()
 
 void AGoal::OnGoal(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool fromSweep, const FHitResult& sweepResult)
 {
-	if (GetNetMode() != NM_Client)
-	{
-		UWorld* World = GetWorld();
-		//assert WORLD
-		ADonutFlyerPawn* donut{ Cast<ADonutFlyerPawn>(otherActor) };
-		if (donut)
-		{
-			//if ()
-			{
-				IScoreKeeperInterface* scoreKeeper{ Cast<IScoreKeeperInterface>(World->GetAuthGameMode()) };
-				if (scoreKeeper)
-				{
-					ADonutFlyerAIController* controller{ donut->GetController<ADonutFlyerAIController>() };
-					ensure(controller);
-					scoreKeeper->Score(this, controller->GetTargetPlayer(), donut);
-				}
-			}
-		}
-		ASpaceshipPawn* flyer{ Cast<ASpaceshipPawn>(otherActor) };
-		if (flyer)
-		{
-			//TODO: set target of donuts to goal..
-			for (const auto& dnt : flyer->Followers)
-			{
-				ADonutFlyerPawn *dfp{ dnt.Get() };
-                if(IsValid(dfp))
+        UWorld* World = GetWorld();
+        ADonutFlyerPawn* donut{ Cast<ADonutFlyerPawn>(otherActor) };
+        if (donut)
+        {
+                IScoreKeeperInterface* scoreKeeper{ Cast<IScoreKeeperInterface>(World->GetAuthGameMode()) };
+                if (scoreKeeper)
                 {
-                    dfp->LockTarget(this, sweepResult.ImpactPoint);
+                        ADonutFlyerAIController* controller{ donut->GetController<ADonutFlyerAIController>() };
+                        ensure(controller);
+                        scoreKeeper->Score(this, controller->GetTargetPlayer(), donut);
                 }
-			}
-			flyer->Followers.Empty();
-		}
-	}
+        }
+        ASpaceshipPawn* flyer{ Cast<ASpaceshipPawn>(otherActor) };
+        if (flyer)
+        {
+                for (const auto& dnt : flyer->Followers)
+                {
+                        ADonutFlyerPawn* dfp{ dnt.Get() };
+                        if (IsValid(dfp))
+                        {
+                                dfp->LockTarget(this, sweepResult.ImpactPoint);
+                        }
+                }
+                flyer->Followers.Empty();
+        }
 }
 
 

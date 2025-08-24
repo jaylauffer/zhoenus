@@ -3,8 +3,6 @@
 
 #include "CoreMinimal.h"
 #include "SpaceshipPawn.h"
-#include "ZhoenusMovementComponent.h"
-#include "ZhoenusMovementSimulation.h"
 #include "ZhoenusPawn.generated.h"
 
 
