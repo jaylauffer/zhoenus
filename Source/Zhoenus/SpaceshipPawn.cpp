@@ -109,55 +109,116 @@ void ASpaceshipPawn::BeginPlay()
 
 void ASpaceshipPawn::Tick(float DeltaSeconds)
 {
-// Call any parent class Tick implementation
-Super::Tick(DeltaSeconds);
+    Super::Tick(DeltaSeconds);
 
-UStaticMeshComponent* Mesh = GetPlaneMesh();
-const float Mass = Mesh->GetMass();
+    // Mouse sticky decay (yours)
+    if (LastInputSource == EInputSource::Mouse && MouseStickDecay > 0.f)
+    {
+        CachedInput.X = FMath::FInterpTo(CachedInput.X, 0.f, DeltaSeconds, MouseStickDecay);
+        CachedInput.Y = FMath::FInterpTo(CachedInput.Y, 0.f, DeltaSeconds, MouseStickDecay);
+    }
 
-// apply thrust as a force rather than teleporting the actor
-double& Thrust{ CachedInput.W };
-CurrentAcceleration = Thrust * Acceleration;
-if (!FMath::IsNearlyZero(Thrust))
-{
-FVector Force = Mesh->GetForwardVector() * (CurrentAcceleration * Mass * -1.f);
-Mesh->AddForce(Force);
+    UStaticMeshComponent* Mesh = GetPlaneMesh();
+    const float Mass = Mesh->GetMass();
+
+    // --- Thrust (yours) ---
+    double& Thrust { CachedInput.W };
+    CurrentAcceleration = Thrust * Acceleration;
+    if (!FMath::IsNearlyZero(Thrust))
+    {
+        const FVector Force = Mesh->GetForwardVector() * (CurrentAcceleration * Mass * -1.f);
+        Mesh->AddForce(Force);
+    }
+
+    // --- Clamp forward speed (yours) ---
+    FVector Velocity  = Mesh->GetPhysicsLinearVelocity();
+    const FTransform& Xf = Mesh->GetComponentTransform();
+    FVector LocalVel  = Xf.InverseTransformVectorNoScale(Velocity);
+    LocalVel.X        = FMath::Clamp(LocalVel.X, MinSpeed, MaxSpeed);
+    CurrentForwardSpeed = LocalVel.X;
+    Velocity          = Xf.TransformVectorNoScale(LocalVel);
+    Mesh->SetPhysicsLinearVelocity(Velocity);
+
+    // --- Pilot torque from inputs (yours, inertia-weighted) ---
+    double& Pitch { CachedInput.X };
+    double& Yaw   { CachedInput.Y };
+    double& Roll  { CachedInput.Z };
+
+    FVector TorqueWS = FVector::ZeroVector;
+    const FVector Inertia = Mesh->GetInertiaTensor(NAME_None); // (Ix, Iy, Iz)
+
+    TorqueWS += Mesh->GetRightVector()    * (Pitch * Inertia.X * PitchSpeed);
+    TorqueWS += Mesh->GetUpVector()       * (Yaw   * Inertia.Y * TurnSpeed);
+    TorqueWS += Mesh->GetForwardVector()  * (Roll  * Inertia.Z * RollSpeed);
+
+    // --- Determine if pilot is "active" (no stabilize when actively steering) ---
+    const bool bInputActive =
+        (FMath::Abs(Pitch)  > StabDeadzone) ||
+        (FMath::Abs(Yaw)    > StabDeadzone) ||
+        (FMath::Abs(Roll)   > StabDeadzone) ||
+        (FMath::Abs(Thrust) > StabDeadzone);
+
+    Mesh->SetAngularDamping(bInputActive ? ActiveAngularDamping : IdleAngularDamping);
+
+    // --- BODY-SPACE PD STABILIZER (attitude hold) ---
+    if (!bInputActive)
+    {
+        // Target upright: pitch=0, roll=0; yaw preserved unless stabilized
+        const FRotator CurWS = GetActorRotation();
+        const FRotator TgtWS(0.f, bStabilizeYaw ? 0.f : CurWS.Yaw, 0.f);
+        const FRotator ErrWS = (TgtWS - CurWS).GetNormalized(); // small-angle deg
+
+        // Express error and angular velocity in BODY frame
+        const FVector ErrVecWS(ErrWS.Pitch, ErrWS.Yaw, ErrWS.Roll); // (Pitch,Yaw,Roll) as components
+        const FVector ErrBodyDeg = Xf.InverseTransformVectorNoScale(ErrVecWS);
+
+        const FVector OmegaWS_Deg = Mesh->GetPhysicsAngularVelocityInDegrees();
+        const FVector OmegaBodyDeg = Xf.InverseTransformVectorNoScale(OmegaWS_Deg);
+
+        // Desired angular acceleration in BODY (deg/s^2)
+        FVector AlphaBodyDeg(
+            Stab_Kp * ErrBodyDeg.X - Stab_Kd * OmegaBodyDeg.X,   // Pitch
+            Stab_Kp * ErrBodyDeg.Y - Stab_Kd * OmegaBodyDeg.Y,   // Yaw
+            Stab_Kp * ErrBodyDeg.Z - Stab_Kd * OmegaBodyDeg.Z    // Roll
+        );
+        if (!bStabilizeYaw) AlphaBodyDeg.Y = 0.f;
+
+        // τ_body = I_body ∘ α_body  (diagonal tensor)
+        FVector TauBody(
+            AlphaBodyDeg.X * Inertia.X,
+            AlphaBodyDeg.Y * Inertia.Y,
+            AlphaBodyDeg.Z * Inertia.Z
+        );
+
+        // Clamp and convert to world
+        if (TauBody.Size() > StabMaxTorque)
+        {
+            TauBody = TauBody.GetSafeNormal() * StabMaxTorque;
+        }
+        const FVector TauWS = Xf.TransformVectorNoScale(TauBody);
+
+        TorqueWS += TauWS;
+
+        // --- Linear drift taming (bleed lateral/up velocity when idle) ---
+        FVector VelWS = Mesh->GetPhysicsLinearVelocity();
+        FVector VelLS = Xf.InverseTransformVectorNoScale(VelWS);
+
+        // Zero tiny noise and bleed Y/Z toward 0 smoothly; keep X (forward) unchanged
+        if (FMath::Abs(VelLS.Y) < LinDeadzone) VelLS.Y = 0.f;
+        if (FMath::Abs(VelLS.Z) < LinDeadzone) VelLS.Z = 0.f;
+
+        VelLS.Y = FMath::FInterpTo(VelLS.Y, 0.f, DeltaSeconds, LinBleedRate);
+        VelLS.Z = FMath::FInterpTo(VelLS.Z, 0.f, DeltaSeconds, LinBleedRate);
+
+        Mesh->SetPhysicsLinearVelocity(Xf.TransformVectorNoScale(VelLS));
+    }
+
+    // Apply total torque
+    Mesh->AddTorqueInDegrees(TorqueWS, NAME_None, false);
+
+    FireShot();
 }
 
-// clamp velocity and track current forward speed
-FVector Velocity = Mesh->GetPhysicsLinearVelocity();
-FVector LocalVel = Mesh->GetComponentTransform().InverseTransformVectorNoScale(Velocity);
-LocalVel.X = FMath::Clamp(LocalVel.X, MinSpeed, MaxSpeed);
-CurrentForwardSpeed = LocalVel.X;
-Velocity = Mesh->GetComponentTransform().TransformVectorNoScale(LocalVel);
-Mesh->SetPhysicsLinearVelocity(Velocity);
-
-// apply torques for 6DOF rotation
-double& Pitch{ CachedInput.X };
-double& Yaw{ CachedInput.Y };
-double& Roll{ CachedInput.Z };
-FVector Torque = FVector::ZeroVector;
-//Torque += Mesh->GetRightVector() * (Pitch * PitchSpeed * Mass);
-//Torque += Mesh->GetUpVector() * (Yaw * TurnSpeed * Mass);
-//Torque += Mesh->GetForwardVector() * (Roll * RollSpeed * Mass);
-    const FVector inertia = Mesh->GetInertiaTensor(NAME_None);
-
-    Torque += Mesh->GetRightVector() * Pitch * inertia.X * PitchSpeed;
-    Torque += Mesh->GetUpVector()    * Yaw   * inertia.Y * TurnSpeed;
-    Torque += Mesh->GetForwardVector()* Roll  * inertia.Z * RollSpeed;
-
-if (FMath::Abs(Pitch) < 0.2f)
-{
-Torque += Mesh->GetRightVector() * (-GetActorRotation().Pitch * AutoCorrectRate * Mass);
-}
-if (FMath::Abs(Roll) < 0.2f)
-{
-Torque += Mesh->GetForwardVector() * (-GetActorRotation().Roll * AutoCorrectRate * Mass);
-}
-Mesh->AddTorqueInDegrees(Torque, NAME_None, false);
-
-FireShot();
-}
 
 void ASpaceshipPawn::NotifyHit(class UPrimitiveComponent* MyComp, class AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
 {
@@ -206,6 +267,10 @@ void ASpaceshipPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 			EnhancedInputComponent->BindAction(StabilizeAction, ETriggerEvent::Triggered, this, &ASpaceshipPawn::StabilizeInput);
             EnhancedInputComponent->BindAction(StabilizeAction, ETriggerEvent::Completed, this, &ASpaceshipPawn::StabilizeInput);
 			// Add more input bindings as needed
+            
+            // NEW: accumulate mouse deltas into a persistent "virtual stick"
+            if (MouseXAction) { EnhancedInputComponent->BindAction(MouseXAction, ETriggerEvent::Triggered, this, &ASpaceshipPawn::OnMouseX); }
+            if (MouseYAction) { EnhancedInputComponent->BindAction(MouseYAction, ETriggerEvent::Triggered, this, &ASpaceshipPawn::OnMouseY); }
 		}
 		else if (PC->PlayerInput)
 		{
@@ -216,6 +281,22 @@ void ASpaceshipPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 			InputComponent->BindAxis("RotateRight", this, &ASpaceshipPawn::MoveRightInput); //right
 		}
 	}
+}
+
+void ASpaceshipPawn::OnMouseX(const FInputActionValue& Value)
+{
+    LastInputSource = EInputSource::Mouse;
+    // Mouse X → yaw stick (CachedInput.Y)
+    const float dx = Value.Get<float>();
+    CachedInput.Y = FMath::Clamp(CachedInput.Y + dx * MouseStickSensitivity, -1.f, 1.f);
+}
+
+void ASpaceshipPawn::OnMouseY(const FInputActionValue& Value)
+{
+    LastInputSource = EInputSource::Mouse;
+    // Mouse Y → pitch stick (CachedInput.X); invert if you prefer flight-style
+    const float dy = Value.Get<float>();
+    CachedInput.X = FMath::Clamp(CachedInput.X + dy * MouseStickSensitivity, -1.f, 1.f);
 }
 
 void ASpaceshipPawn::OrigThrustInput(float Val)
@@ -245,7 +326,7 @@ void ASpaceshipPawn::YawInput(const FInputActionValue& Value)
 
 void ASpaceshipPawn::RollInput(const FInputActionValue& Value)
 {
-	float Roll = Value.Get<float>();
+	float Roll = -Value.Get<float>();
 	CachedInput.Z = FMath::Clamp(Roll, -1.f, 1.f);
 }
 

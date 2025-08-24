@@ -75,7 +75,81 @@ public:
 
         UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
         class UInputMappingContext* ShipInputMappingContext;
+    
+    // Virtual mouse-stick params/state
+    UPROPERTY(EditAnywhere, Category="Input|MouseStick")
+    float MouseStickSensitivity = 0.003f;    // px → axis units
 
+    UPROPERTY(EditAnywhere, Category="Input|MouseStick")
+    float MouseStickDecay = 0.05f;            // 0 = sticky; >0 = spring to 0
+
+    // Map to your existing CachedInput: X=pitch, Y=yaw
+    // (We reuse CachedInput so Tick physics keeps working)
+
+    // Enhanced Input actions (assign in BP or Defaults)
+    UPROPERTY(EditDefaultsOnly, Category="Input|MouseStick")
+    UInputAction* MouseXAction = nullptr;
+
+    UPROPERTY(EditDefaultsOnly, Category="Input|MouseStick")
+    UInputAction* MouseYAction = nullptr;
+
+    UFUNCTION()
+    void OnMouseX(const FInputActionValue& Value);
+
+    UFUNCTION()
+    void OnMouseY(const FInputActionValue& Value);
+    
+    // === Attitude stabilizer (body-space PD) ===
+    UPROPERTY(EditAnywhere, Category="Stabilizer")
+    float Stab_Kp = 6.0f;          // deg torque per deg error (after inertia scaling)
+    UPROPERTY(EditAnywhere, Category="Stabilizer")
+    float Stab_Kd = 0.6f;          // deg torque per deg/s
+    UPROPERTY(EditAnywhere, Category="Stabilizer")
+    float StabDeadzone = 0.05f;    // input neutral threshold
+    UPROPERTY(EditAnywhere, Category="Stabilizer")
+    bool  bStabilizeYaw = false;   // hold heading or leave yaw free
+    UPROPERTY(EditAnywhere, Category="Stabilizer")
+    float StabMaxTorque = 200000.f;// safety clamp (tune for your mesh)
+
+    UPROPERTY(EditAnywhere, Category="Stabilizer")
+    float ActiveAngularDamping = 0.2f;
+    UPROPERTY(EditAnywhere, Category="Stabilizer")
+    float IdleAngularDamping   = 8.0f;
+
+    // === Linear drift taming (side/up bleed when idle) ===
+    UPROPERTY(EditAnywhere, Category="Stabilizer|Linear")
+    float LinBleedRate = 2.0f;     // FInterpTo speed (per second) for Y/Z velocity → 0
+    UPROPERTY(EditAnywhere, Category="Stabilizer|Linear")
+    float LinDeadzone  = 2.0f;     // ignore tiny cm/s noise
+
+    // --- “Arcade rate” control ---
+    UPROPERTY(EditAnywhere, Category="Arcade")
+    float MaxPitchRateDeg = 180.f;
+    UPROPERTY(EditAnywhere, Category="Arcade")
+    float MaxYawRateDeg   = 220.f;
+    UPROPERTY(EditAnywhere, Category="Arcade")
+    float MaxRollRateDeg  = 260.f;
+
+    // PD on angular *rate* (omega) → snappy response
+    UPROPERTY(EditAnywhere, Category="Arcade")
+    float Rate_Kp = 8.0f;      // how fast to chase target rate
+    UPROPERTY(EditAnywhere, Category="Arcade")
+    float Rate_Kd = 0.2f;      // damps overshoot/oscillation
+    UPROPERTY(EditAnywhere, Category="Arcade")
+    float MaxCtrlTorque = 250000.f; // safety clamp
+
+    // Forward speed hold (arcade thrust)
+    UPROPERTY(EditAnywhere, Category="Arcade")
+    float MaxForwardSpeed = 3000.f; // hard cap
+    UPROPERTY(EditAnywhere, Category="Arcade")
+    float Speed_Kp = 8000.f;  // N per (cm/s) error (tune for your mass)
+    UPROPERTY(EditAnywhere, Category="Arcade")
+    float Speed_Kd = 50.f;    // N per (cm/s^2) (optional)
+
+    // Input shaping (makes center feel crisp)
+    UPROPERTY(EditAnywhere, Category="Arcade")
+    float Expo = 0.25f; // 0..0.5; raises small inputs
+    
 protected:
 	/** StaticMesh component that will be the visuals for our flying pawn */
         UPROPERTY(Category = Mesh, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
@@ -103,6 +177,15 @@ private:
 
 	UPROPERTY(Category = Plane, EditAnywhere)
 	float PitchSpeed;
+    
+    enum class EInputSource
+    {
+        None,
+        Mouse,
+        Gamepad
+    };
+
+    EInputSource LastInputSource = EInputSource::None;
 
 public:
 	FQuat CachedInput;
