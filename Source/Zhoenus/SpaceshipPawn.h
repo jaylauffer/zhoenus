@@ -3,8 +3,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
-#include "ZhoenusMovementComponent.h"
-#include "ZhoenusMovementSimulation.h"
 #include "SpaceshipPawn.generated.h"
 
 struct FInputActionValue;
@@ -69,33 +67,27 @@ public:
 	UPROPERTY(Category=Team, EditAnywhere)
 	int32 Team;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = Status)
-	bool IsDonutTarget;
+        UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Status)
+        bool IsDonutTarget;
 
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = Status)
-	TSet<TWeakObjectPtr<class ADonutFlyerPawn>> Followers;
+        //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Status)
+        TSet<TWeakObjectPtr<class ADonutFlyerPawn>> Followers;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	class UInputMappingContext* ShipInputMappingContext;
-
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+        UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+        class UInputMappingContext* ShipInputMappingContext;
 
 protected:
 	/** StaticMesh component that will be the visuals for our flying pawn */
-	UPROPERTY(Category = Mesh, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	class UStaticMeshComponent* PlaneMesh;
+        UPROPERTY(Category = Mesh, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+        class UStaticMeshComponent* PlaneMesh;
 
-	// Begin APawn overrides
-	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override; // Allows binding actions/axes to functions
-	// End APawn overrides
-	void ProduceInput(const int32 DeltaMS, FZhoenusMovementInputCmd& Cmd);
+        // Begin APawn overrides
+        virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override; // Allows binding actions/axes to functions
+        // End APawn overrides
 
 private:
 
-	UPROPERTY(Category = Movement, VisibleAnywhere)
-	UZhoenusMovementComponent* FlyingMovementComponent;
-
-	bool bCanFire;
+        bool bCanFire;
 	FVector GunOffset;
 	void FireShot();
 	void ShotTimerExpired();

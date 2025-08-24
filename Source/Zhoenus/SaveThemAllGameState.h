@@ -14,13 +14,11 @@ class ASaveThemAllGameState : public AGameStateBase
 public:
 	ASaveThemAllGameState();
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+        UPROPERTY(BlueprintReadWrite)
+        int32 Saved;
 
-	UPROPERTY(Replicated, BlueprintReadWrite)
-	int32 Saved;
-
-	UPROPERTY(Replicated, BlueprintReadWrite)
-	int32 Total;
+        UPROPERTY(BlueprintReadWrite)
+        int32 Total;
 
 };
 
