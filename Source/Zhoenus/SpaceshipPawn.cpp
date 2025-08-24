@@ -137,9 +137,15 @@ double& Pitch{ CachedInput.X };
 double& Yaw{ CachedInput.Y };
 double& Roll{ CachedInput.Z };
 FVector Torque = FVector::ZeroVector;
-Torque += Mesh->GetRightVector() * (Pitch * PitchSpeed * Mass);
-Torque += Mesh->GetUpVector() * (Yaw * TurnSpeed * Mass);
-Torque += Mesh->GetForwardVector() * (Roll * RollSpeed * Mass);
+//Torque += Mesh->GetRightVector() * (Pitch * PitchSpeed * Mass);
+//Torque += Mesh->GetUpVector() * (Yaw * TurnSpeed * Mass);
+//Torque += Mesh->GetForwardVector() * (Roll * RollSpeed * Mass);
+    const FVector inertia = Mesh->GetInertiaTensor(NAME_None);
+
+    Torque += Mesh->GetRightVector() * Pitch * inertia.X * PitchSpeed;
+    Torque += Mesh->GetUpVector()    * Yaw   * inertia.Y * TurnSpeed;
+    Torque += Mesh->GetForwardVector()* Roll  * inertia.Z * RollSpeed;
+
 if (FMath::Abs(Pitch) < 0.2f)
 {
 Torque += Mesh->GetRightVector() * (-GetActorRotation().Pitch * AutoCorrectRate * Mass);
