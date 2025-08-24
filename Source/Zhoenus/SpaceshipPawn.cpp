@@ -49,9 +49,11 @@ ASpaceshipPawn::ASpaceshipPawn(const FObjectInitializer &initializer)
 	PlaneMesh->SetStaticMesh(ConstructorStatics.PlaneMesh.Get());	// Set static mesh
 	PlaneMesh->BodyInstance.bSimulatePhysics = true;
 	PlaneMesh->BodyInstance.bEnableGravity = false;
-	RootComponent = PlaneMesh;
+RootComponent = PlaneMesh;
+PlaneMesh->SetSimulatePhysics(true);
+PlaneMesh->SetEnableGravity(false);
 
-	// Cache our sound effect
+// Cache our sound effect
 	static ConstructorHelpers::FObjectFinder<USoundBase> FireAudio(TEXT("/Game/Flying/Audio/TwinStickFire.TwinStickFire"));
 	FireSound = FireAudio.Object;
 
@@ -107,41 +109,48 @@ void ASpaceshipPawn::BeginPlay()
 
 void ASpaceshipPawn::Tick(float DeltaSeconds)
 {
-	// Call any parent class Tick implementation
-	Super::Tick(DeltaSeconds);
-        double& Thrust{ CachedInput.W };
-        bool bHasInput = !FMath::IsNearlyEqual(Thrust, 0.f);
-        CurrentAcceleration = bHasInput ? (Thrust * Acceleration * -1.f) : (CurrentForwardSpeed < 0.0 ? 0.5f * Acceleration : -0.5f * Acceleration);
-        CurrentForwardSpeed += CurrentAcceleration * DeltaSeconds;
-        CurrentForwardSpeed = FMath::Clamp(CurrentForwardSpeed, MinSpeed, MaxSpeed);
-        const FVector LocalMove = FVector(CurrentForwardSpeed * DeltaSeconds, 0.f, 0.f);
+// Call any parent class Tick implementation
+Super::Tick(DeltaSeconds);
 
-        // Move plane forwards (with sweep so we stop when we collide with things)
-        AddActorLocalOffset(LocalMove, true);
+UStaticMeshComponent* Mesh = GetPlaneMesh();
+const float Mass = Mesh->GetMass();
 
-        // Calculate change in rotation this frame
-        double& Pitch{ CachedInput.X };
-        double& Yaw{ CachedInput.Y };
-        double& Roll{ CachedInput.Z };
+// apply thrust as a force rather than teleporting the actor
+double& Thrust{ CachedInput.W };
+CurrentAcceleration = Thrust * Acceleration;
+if (!FMath::IsNearlyZero(Thrust))
+{
+FVector Force = Mesh->GetForwardVector() * (CurrentAcceleration * Mass * -1.f);
+Mesh->AddForce(Force);
+}
 
-        const bool PitchInput = FMath::Abs(Pitch) > 0.2f;
-        TargetPitchSpeed = PitchInput ? (Pitch * PitchSpeed * -1.f) : (GetActorRotation().Pitch * -1.5f * AutoCorrectRate);
-        CurrentPitchSpeed = FMath::FInterpTo(CurrentPitchSpeed, TargetPitchSpeed, DeltaSeconds, 2.f);
+// clamp velocity and track current forward speed
+FVector Velocity = Mesh->GetPhysicsLinearVelocity();
+FVector LocalVel = Mesh->GetComponentTransform().InverseTransformVectorNoScale(Velocity);
+LocalVel.X = FMath::Clamp(LocalVel.X, MinSpeed, MaxSpeed);
+CurrentForwardSpeed = LocalVel.X;
+Velocity = Mesh->GetComponentTransform().TransformVectorNoScale(LocalVel);
+Mesh->SetPhysicsLinearVelocity(Velocity);
 
-        const bool YawInput = FMath::Abs(Yaw) > 0.2f;
-        TargetYawSpeed = YawInput ? (Yaw * TurnSpeed) : 0.f;
-        CurrentYawSpeed = FMath::FInterpTo(CurrentYawSpeed, TargetYawSpeed, DeltaSeconds, 2.f);
+// apply torques for 6DOF rotation
+double& Pitch{ CachedInput.X };
+double& Yaw{ CachedInput.Y };
+double& Roll{ CachedInput.Z };
+FVector Torque = FVector::ZeroVector;
+Torque += Mesh->GetRightVector() * (Pitch * PitchSpeed * Mass);
+Torque += Mesh->GetUpVector() * (Yaw * TurnSpeed * Mass);
+Torque += Mesh->GetForwardVector() * (Roll * RollSpeed * Mass);
+if (FMath::Abs(Pitch) < 0.2f)
+{
+Torque += Mesh->GetRightVector() * (-GetActorRotation().Pitch * AutoCorrectRate * Mass);
+}
+if (FMath::Abs(Roll) < 0.2f)
+{
+Torque += Mesh->GetForwardVector() * (-GetActorRotation().Roll * AutoCorrectRate * Mass);
+}
+Mesh->AddTorqueInDegrees(Torque, NAME_None, false);
 
-        const bool RollInput = FMath::Abs(Roll) > 0.2f;
-        TargetRollSpeed = RollInput ? (Roll * RollSpeed) : (GetActorRotation().Roll * -1.5f * AutoCorrectRate);
-        CurrentRollSpeed = FMath::FInterpTo(CurrentRollSpeed, TargetRollSpeed, DeltaSeconds, 2.f);
-
-        FRotator DeltaRotation(0, 0, 0);
-        DeltaRotation.Pitch = CurrentPitchSpeed * DeltaSeconds;
-        DeltaRotation.Yaw = CurrentYawSpeed * DeltaSeconds;
-        DeltaRotation.Roll = CurrentRollSpeed * DeltaSeconds;
-        AddActorLocalRotation(DeltaRotation.Quaternion());
-        FireShot();
+FireShot();
 }
 
 void ASpaceshipPawn::NotifyHit(class UPrimitiveComponent* MyComp, class AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
