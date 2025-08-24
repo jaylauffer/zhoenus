@@ -117,8 +117,8 @@ public:
     float IdleAngularDamping   = 8.0f;
 
     // === Linear drift taming (side/up bleed when idle) ===
-    UPROPERTY(EditAnywhere, Category="Stabilizer|Linear")
-    float LinBleedRate = 2.0f;     // FInterpTo speed (per second) for Y/Z velocity → 0
+    //UPROPERTY(EditAnywhere, Category="Stabilizer|Linear")
+    //float LinBleedRate = 2.0f;     // FInterpTo speed (per second) for Y/Z velocity → 0
     UPROPERTY(EditAnywhere, Category="Stabilizer|Linear")
     float LinDeadzone  = 2.0f;     // ignore tiny cm/s noise
 
