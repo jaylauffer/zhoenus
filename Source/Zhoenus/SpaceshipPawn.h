@@ -137,6 +137,28 @@ public:
     UPROPERTY(EditAnywhere, Category="ArcadeRot")
     float DampingWhenIdle     = 2.5f;
     
+    // Stabilizer gains (levels to horizon)
+    UPROPERTY(EditAnywhere, Category="Stabilize")
+    float Stabilize_Kp = 8.0f;    // angle error → torque
+    UPROPERTY(EditAnywhere, Category="Stabilize")
+    float Stabilize_Kd = 0.8f;    // angular-vel damping
+    UPROPERTY(EditAnywhere, Category="Stabilize")
+    float Stabilize_MaxTorque = 3.0e5f; // clamp
+
+    // Extra damping & velocity bleed while stabilizing
+    UPROPERTY(EditAnywhere, Category="Stabilize")
+    float StabilizeAngularDamping = 6.0f;  // overrides normal damping while active
+    UPROPERTY(EditAnywhere, Category="Stabilize|Linear")
+    float StabilizeLinBleedRate = 4.0f;    // FInterpTo speed for side/up bleed
+    UPROPERTY(EditAnywhere, Category="Stabilize|Linear")
+    float StabilizeVertBleedRate = 6.0f;   // world-Z bleed speed
+
+    // Optional: ground assist (stronger bleed when near ground)
+    UPROPERTY(EditAnywhere, Category="Stabilize|Ground")
+    float GroundProbeDist = 200.f;         // cm
+    UPROPERTY(EditAnywhere, Category="Stabilize|Ground")
+    float GroundBoost = 1.5f;              // multiplies bleed/damping near ground
+    
 protected:
 	/** StaticMesh component that will be the visuals for our flying pawn */
         UPROPERTY(Category = Mesh, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))

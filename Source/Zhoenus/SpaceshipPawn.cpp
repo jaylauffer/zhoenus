@@ -122,7 +122,7 @@ void ASpaceshipPawn::Tick(float DeltaSeconds)
     if (!Mesh) return;
 
     const FTransform& Xf = Mesh->GetComponentTransform();
-    const FVector     I  = Mesh->GetInertiaTensor(NAME_None); // (Ix about +X/Forward, Iy about +Y/Right, Iz about +Z/Up)
+    const FVector     I  = Mesh->GetInertiaTensor(NAME_None); // (Ix, Iy, Iz)
     const float       M  = Mesh->GetMass();
 
     // =========================================================
@@ -135,7 +135,7 @@ void ASpaceshipPawn::Tick(float DeltaSeconds)
         Mesh->AddForce(Mesh->GetForwardVector() * (CurrentAcceleration * M));
     }
 
-    // Local velocity: clamp forward speed, keep for drift bleed
+    // Local velocity: clamp forward speed; keep VelWS/VelLS in outer scope
     FVector VelWS = Mesh->GetPhysicsLinearVelocity();
     FVector VelLS = Xf.InverseTransformVectorNoScale(VelWS);
     VelLS.X = FMath::Clamp(VelLS.X, MinSpeed, MaxSpeed);
@@ -153,16 +153,14 @@ void ASpaceshipPawn::Tick(float DeltaSeconds)
     float InYaw   = ExpoShape(FMath::Clamp((float)CachedInput.Y, -1.f, 1.f)); // Yaw command
     float InRoll  = ExpoShape(FMath::Clamp((float)CachedInput.Z, -1.f, 1.f)); // Roll command
 
-    // Optional direction inversions (apply here once)
     if (bInvertMousePitch) InPitch = -InPitch;
     if (bInvertYaw)        InYaw   = -InYaw;
     if (bInvertRoll)       InRoll  = -InRoll;
 
     // Targets in BODY axes (X=roll, Y=pitch, Z=yaw)
-    const float RollRateTgt  = InRoll  * MaxRollRateDeg;   // about Forward (+X)
-    const float PitchRateTgt = InPitch * MaxPitchRateDeg;  // about Right   (+Y)
-    const float YawRateTgt   = InYaw   * MaxYawRateDeg;    // about Up      (+Z)
-
+    const float RollRateTgt  = InRoll  * MaxRollRateDeg;   // about +X
+    const float PitchRateTgt = InPitch * MaxPitchRateDeg;  // about +Y
+    const float YawRateTgt   = InYaw   * MaxYawRateDeg;    // about +Z
     const FVector OmegaTgtBodyDeg(RollRateTgt, PitchRateTgt, YawRateTgt);
 
     // Current angular velocity in BODY (deg/s)
@@ -195,29 +193,94 @@ void ASpaceshipPawn::Tick(float DeltaSeconds)
     Mesh->SetAngularDamping(bPiloting ? DampingWhenPiloting : DampingWhenIdle);
 
     // =========================================================
-    // 3) LINEAR DRIFT TAMING (side/up bleed when not piloting)
+    // 3) STABILIZE (Horizon-level + impact recovery)
     // =========================================================
-    if (!bPiloting)
+    bool bDidStabilizeBleed = false;
+    const float S = FMath::Clamp((float)StabilityInput.X, 0.f, 1.f);
+    if (S > 0.01f)
     {
-        if (FMath::Abs(VelLS.Y) < LinDeadzone) VelLS.Y = 0.f;
-        if (FMath::Abs(VelLS.Z) < LinDeadzone) VelLS.Z = 0.f;
+        bDidStabilizeBleed = true;
 
-        VelLS.Y = FMath::FInterpTo(VelLS.Y, 0.f, DeltaSeconds, LinBleedRate);
-        VelLS.Z = FMath::FInterpTo(VelLS.Z, 0.f, DeltaSeconds, LinBleedRate);
+        // stronger damping while stabilizing
+        Mesh->SetAngularDamping(FMath::Max(StabilizeAngularDamping, Mesh->GetAngularDamping()));
+
+        // Target: keep heading, align Up to world Up (level to horizon)
+        const FVector WorldUp = FVector::UpVector;
+        const FVector FwdWS   = Mesh->GetForwardVector();
+        FVector FwdHoriz = (FwdWS - FVector::DotProduct(FwdWS, WorldUp) * WorldUp).GetSafeNormal();
+        if (FwdHoriz.IsNearlyZero()) { FwdHoriz = Mesh->GetRightVector(); }
+
+        const FRotator TargetWS = FRotationMatrix::MakeFromXZ(FwdHoriz, WorldUp).Rotator();
+        const FRotator CurWS    = GetActorRotation();
+        const FRotator ErrWS    = (TargetWS - CurWS).GetNormalized();   // (Pitch,Yaw,Roll) in deg
+
+        // Body-space PD (correct pitch & roll; only damp yaw)
+        const FVector ErrBodyDeg = Xf.InverseTransformVectorNoScale(FVector(ErrWS.Pitch, ErrWS.Yaw, ErrWS.Roll));
+        const FVector OmegaBodyDeg2 = Xf.InverseTransformVectorNoScale(Mesh->GetPhysicsAngularVelocityInDegrees());
+
+        const float Kp = Stabilize_Kp * S;
+        const float Kd = Stabilize_Kd * S;
+
+        // BODY axes: X=roll, Y=pitch, Z=yaw
+        FVector AlphaBodyDeg2(
+            /*roll*/  Kp * ErrBodyDeg.Z - Kd * OmegaBodyDeg2.X,
+            /*pitch*/ Kp * ErrBodyDeg.X - Kd * OmegaBodyDeg2.Y,
+            /*yaw  */ 0.f               - Kd * OmegaBodyDeg2.Z   // no heading correction, only damping
+        );
+
+        FVector TauBody2(
+            AlphaBodyDeg2.X * I.X,
+            AlphaBodyDeg2.Y * I.Y,
+            AlphaBodyDeg2.Z * I.Z
+        );
+
+        const float MaxTStab = Stabilize_MaxTorque * (0.5f + 0.5f * S);
+        if (TauBody2.Size() > MaxTStab) TauBody2 = TauBody2.GetSafeNormal() * MaxTStab;
+
+        const FVector TauWS_Stab = Xf.TransformVectorNoScale(TauBody2);
+        Mesh->AddTorqueInDegrees(TauWS_Stab, NAME_None, false);
+
+        // Linear bleed: kill side-slip (local Y/Z) and world vertical bob
+        const float BleedScale = (0.5f + 0.5f * S);
+        VelLS.Y = FMath::FInterpTo(VelLS.Y, 0.f, DeltaSeconds, StabilizeLinBleedRate  * BleedScale);
+        VelLS.Z = FMath::FInterpTo(VelLS.Z, 0.f, DeltaSeconds, StabilizeLinBleedRate  * BleedScale);
+
+        VelWS = Xf.TransformVectorNoScale(VelLS);
+        VelWS.Z = FMath::FInterpTo(VelWS.Z, 0.f, DeltaSeconds, StabilizeVertBleedRate * BleedScale);
+
+        // Optional: boost near ground
+        FHitResult Hit;
+        const FVector P = Mesh->GetComponentLocation();
+        const bool bNearGround = GetWorld()->LineTraceSingleByChannel(Hit, P, P - FVector(0,0,GroundProbeDist), ECC_Visibility);
+        if (bNearGround)
+        {
+            VelWS.Z = FMath::FInterpTo(VelWS.Z, 0.f, DeltaSeconds, StabilizeVertBleedRate * GroundBoost);
+            Mesh->SetAngularDamping(FMath::Max(Mesh->GetAngularDamping(), StabilizeAngularDamping * GroundBoost));
+        }
+
+        Mesh->SetPhysicsLinearVelocity(VelWS, false);
     }
 
-    // Write velocity back
-    VelWS = Xf.TransformVectorNoScale(VelLS);
-    Mesh->SetPhysicsLinearVelocity(VelWS, false);
+    // =========================================================
+    // 4) LINEAR DRIFT TAMING (only if Stabilize didn’t already do it)
+    // =========================================================
+    if (!bDidStabilizeBleed)
+    {
+        if (!bPiloting)
+        {
+            if (FMath::Abs(VelLS.Y) < LinDeadzone) VelLS.Y = 0.f;
+            if (FMath::Abs(VelLS.Z) < LinDeadzone) VelLS.Z = 0.f;
+
+            VelLS.Y = FMath::FInterpTo(VelLS.Y, 0.f, DeltaSeconds, LinBleedRate);
+            VelLS.Z = FMath::FInterpTo(VelLS.Z, 0.f, DeltaSeconds, LinBleedRate);
+        }
+
+        const FVector VelWS_Final = Xf.TransformVectorNoScale(VelLS);
+        Mesh->SetPhysicsLinearVelocity(VelWS_Final, false);
+    }
 
     // Weapons
     FireShot();
-
-    // // Debug axes (optional)
-    // const FVector p = Mesh->GetComponentLocation();
-    // DrawDebugLine(GetWorld(), p, p + Mesh->GetForwardVector()*150, FColor::Red,   false, 0,0,2); // +X (Forward)
-    // DrawDebugLine(GetWorld(), p, p + Mesh->GetRightVector()  *150, FColor::Green, false, 0,0,2); // +Y (Right)
-    // DrawDebugLine(GetWorld(), p, p + Mesh->GetUpVector()     *150, FColor::Blue,  false, 0,0,2); // +Z (Up)
 }
 
 void ASpaceshipPawn::NotifyHit(class UPrimitiveComponent* MyComp, class AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
@@ -332,18 +395,8 @@ void ASpaceshipPawn::RollInput(const FInputActionValue& Value)
 
 void ASpaceshipPawn::StabilizeInput(const FInputActionValue& Value)
 {
-	AutoCorrectRate =
-	StabilityInput.X = Value.Get<float>();
-	if (FMath::IsNearlyEqual(AutoCorrectRate, 0.f))
-	{
-		GetPlaneMesh()->SetAngularDamping(0.f);
-		GetPlaneMesh()->SetLinearDamping(0.f);
-	}
-	else
-	{
-		GetPlaneMesh()->SetAngularDamping(20.f * AutoCorrectRate);
-		GetPlaneMesh()->SetLinearDamping(20.f * AutoCorrectRate);
-	}
+    StabilityInput.X = Value.Get<float>(); // 0..1
+    AutoCorrectRate  = StabilityInput.X;   // if you still read this elsewhere
 }
 
 void ASpaceshipPawn::MoveUpInput(float Val)
