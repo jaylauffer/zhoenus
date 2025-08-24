@@ -107,17 +107,27 @@ void ASpaceshipPawn::BeginPlay()
 
 void ASpaceshipPawn::Tick(float DeltaSeconds)
 {
-	// Call any parent class Tick implementation
-	Super::Tick(DeltaSeconds);
-        double& Thrust{ CachedInput.W };
-        bool bHasInput = !FMath::IsNearlyEqual(Thrust, 0.f);
-        CurrentAcceleration = bHasInput ? (Thrust * Acceleration * -1.f) : (CurrentForwardSpeed < 0.0 ? 0.5f * Acceleration : -0.5f * Acceleration);
-        CurrentForwardSpeed += CurrentAcceleration * DeltaSeconds;
-        CurrentForwardSpeed = FMath::Clamp(CurrentForwardSpeed, MinSpeed, MaxSpeed);
-        const FVector LocalMove = FVector(CurrentForwardSpeed * DeltaSeconds, 0.f, 0.f);
+        // Call any parent class Tick implementation
+        Super::Tick(DeltaSeconds);
+       double& Thrust{ CachedInput.W };
+       bool bHasInput = !FMath::IsNearlyEqual(Thrust, 0.f);
+       CurrentAcceleration = bHasInput ? (Thrust * Acceleration * -1.f) : (CurrentForwardSpeed < 0.0 ? 0.5f * Acceleration : -0.5f * Acceleration);
 
-        // Move plane forwards (with sweep so we stop when we collide with things)
-        AddActorLocalOffset(LocalMove, true);
+       // Apply thrust using physics instead of teleporting the actor
+       const FVector Force = GetActorForwardVector() * CurrentAcceleration * PlaneMesh->GetMass();
+       PlaneMesh->AddForce(Force);
+
+       // Update our stored forward speed from the physics state and clamp to limits
+       CurrentForwardSpeed = FVector::DotProduct(PlaneMesh->GetComponentVelocity(), GetActorForwardVector());
+       float ClampedSpeed = FMath::Clamp(CurrentForwardSpeed, MinSpeed, MaxSpeed);
+       if (!FMath::IsNearlyEqual(CurrentForwardSpeed, ClampedSpeed))
+       {
+               FVector Vel = PlaneMesh->GetComponentVelocity();
+               FVector Forward = GetActorForwardVector();
+               Vel += (ClampedSpeed - CurrentForwardSpeed) * Forward;
+               PlaneMesh->SetPhysicsLinearVelocity(Vel);
+               CurrentForwardSpeed = ClampedSpeed;
+       }
 
         // Calculate change in rotation this frame
         double& Pitch{ CachedInput.X };
@@ -136,12 +146,14 @@ void ASpaceshipPawn::Tick(float DeltaSeconds)
         TargetRollSpeed = RollInput ? (Roll * RollSpeed) : (GetActorRotation().Roll * -1.5f * AutoCorrectRate);
         CurrentRollSpeed = FMath::FInterpTo(CurrentRollSpeed, TargetRollSpeed, DeltaSeconds, 2.f);
 
-        FRotator DeltaRotation(0, 0, 0);
-        DeltaRotation.Pitch = CurrentPitchSpeed * DeltaSeconds;
-        DeltaRotation.Yaw = CurrentYawSpeed * DeltaSeconds;
-        DeltaRotation.Roll = CurrentRollSpeed * DeltaSeconds;
-        AddActorLocalRotation(DeltaRotation.Quaternion());
-        FireShot();
+       // Apply rotational forces through physics
+       FVector Torque = GetActorRightVector() * CurrentPitchSpeed;
+       Torque += GetActorUpVector() * CurrentYawSpeed;
+       Torque += GetActorForwardVector() * CurrentRollSpeed;
+       PlaneMesh->AddTorqueInDegrees(Torque * PlaneMesh->GetMass());
+
+       // Fire weapons if necessary
+       FireShot();
 }
 
 void ASpaceshipPawn::NotifyHit(class UPrimitiveComponent* MyComp, class AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
@@ -158,13 +170,13 @@ void ASpaceshipPawn::NotifyHit(class UPrimitiveComponent* MyComp, class AActor* 
 		UE_LOG(LogSpaceshipPawn, Log, TEXT("Collision - other: %s .. me: %s -- push %s - %g %g"), Other?*Other->GetName():TEXT("--unknown--"), *GetName(), *push.ToString(), CurrentForwardSpeed, PlaneMesh->GetMass());
 #endif
 	}
-	else
-	{
-		// Deflect along the surface when we collide.
-		FRotator CurrentRotation = GetActorRotation();
-		SetActorRotation(FQuat::Slerp(CurrentRotation.Quaternion(), HitNormal.ToOrientationQuat(), 0.025f));
-		//UE_LOG(LogSpaceshipPawn, Log, TEXT("Slide - other: %s .. me: %s"), Other?*Other->GetName():TEXT("--unknown--"), *GetName());
-	}
+       else
+       {
+               // Use an impulse to deflect instead of teleporting rotation
+               FVector DeflectImpulse = HitNormal * NormalImpulse.Size();
+               PlaneMesh->AddImpulseAtLocation(DeflectImpulse, HitLocation);
+               //UE_LOG(LogSpaceshipPawn, Log, TEXT("Slide - other: %s .. me: %s"), Other?*Other->GetName():TEXT("--unknown--"), *GetName());
+       }
 }
 
 
