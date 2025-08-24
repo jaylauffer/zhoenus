@@ -101,11 +101,11 @@ public:
     
     // Rotation rates (deg/s) at full stick
     UPROPERTY(EditAnywhere, Category="ArcadeRot")
-    float MaxPitchRateDeg = 180.f;
+    float MaxPitchRateDeg = 220.f;
     UPROPERTY(EditAnywhere, Category="ArcadeRot")
-    float MaxYawRateDeg   = 220.f;
+    float MaxYawRateDeg   = 320.f;
     UPROPERTY(EditAnywhere, Category="ArcadeRot")
-    float MaxRollRateDeg  = 260.f;
+    float MaxRollRateDeg  = 360.f;
 
     // PD gains on angular rate (body space)
     UPROPERTY(EditAnywhere, Category="ArcadeRot")

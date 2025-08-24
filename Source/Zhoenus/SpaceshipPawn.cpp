@@ -158,9 +158,9 @@ void ASpaceshipPawn::Tick(float DeltaSeconds)
     if (bInvertRoll)       InRoll  = -InRoll;
 
     // Targets in BODY axes (X=roll, Y=pitch, Z=yaw)
-    const float RollRateTgt  = InRoll  * MaxRollRateDeg;   // about +X
-    const float PitchRateTgt = InPitch * MaxPitchRateDeg;  // about +Y
-    const float YawRateTgt   = InYaw   * MaxYawRateDeg;    // about +Z
+    const float RollRateTgt  = InRoll  * MaxRollRateDeg;   // +X
+    const float PitchRateTgt = InPitch * MaxPitchRateDeg;  // +Y
+    const float YawRateTgt   = InYaw   * MaxYawRateDeg;    // +Z
     const FVector OmegaTgtBodyDeg(RollRateTgt, PitchRateTgt, YawRateTgt);
 
     // Current angular velocity in BODY (deg/s)
@@ -192,71 +192,73 @@ void ASpaceshipPawn::Tick(float DeltaSeconds)
         (FMath::Abs(ThrustInput) > 0.02f);
     Mesh->SetAngularDamping(bPiloting ? DampingWhenPiloting : DampingWhenIdle);
 
-    // =========================================================
-    // 3) STABILIZE (Horizon-level + impact recovery)
-    // =========================================================
+    // ======================
+    // 3) STABILIZE (slowly level to horizon using dot-product errors)
+    // ======================
     bool bDidStabilizeBleed = false;
     const float S = FMath::Clamp((float)StabilityInput.X, 0.f, 1.f);
     if (S > 0.01f)
     {
         bDidStabilizeBleed = true;
 
-        // stronger damping while stabilizing
+        // Slightly stronger damping while stabilizing
         Mesh->SetAngularDamping(FMath::Max(StabilizeAngularDamping, Mesh->GetAngularDamping()));
 
-        // Target: keep heading, align Up to world Up (level to horizon)
-        const FVector WorldUp = FVector::UpVector;
-        const FVector FwdWS   = Mesh->GetForwardVector();
-        FVector FwdHoriz = (FwdWS - FVector::DotProduct(FwdWS, WorldUp) * WorldUp).GetSafeNormal();
-        if (FwdHoriz.IsNearlyZero()) { FwdHoriz = Mesh->GetRightVector(); }
+        // World references
+        const FVector WorldUp  = FVector::UpVector;
+        const FVector FwdWS    = Mesh->GetForwardVector();
+        const FVector RightWS  = Mesh->GetRightVector();
 
-        const FRotator TargetWS = FRotationMatrix::MakeFromXZ(FwdHoriz, WorldUp).Rotator();
-        const FRotator CurWS    = GetActorRotation();
-        const FRotator ErrWS    = (TargetWS - CurWS).GetNormalized();   // (Pitch,Yaw,Roll) in deg
+        // --- Pitch & Roll error relative to horizon (in RADIANS) ---
+        // pitchErr > 0 when nose is above horizon
+        const float pitchErrRad = FMath::Asin(FVector::DotProduct(FwdWS, WorldUp));
+        // rollErr > 0 when right wing is UP (banked right)
+        const float rollErrRad  = FMath::Asin(FVector::DotProduct(RightWS, WorldUp));
 
-        // Body-space PD (correct pitch & roll; only damp yaw)
-        const FVector ErrBodyDeg = Xf.InverseTransformVectorNoScale(FVector(ErrWS.Pitch, ErrWS.Yaw, ErrWS.Roll));
-        const FVector OmegaBodyDeg2 = Xf.InverseTransformVectorNoScale(Mesh->GetPhysicsAngularVelocityInDegrees());
+        // Convert to deg for clearer scaling
+        const float pitchErrDeg = FMath::RadiansToDegrees(pitchErrRad);
+        const float rollErrDeg  = FMath::RadiansToDegrees(rollErrRad);
 
-        const float Kp = Stabilize_Kp * S;
-        const float Kd = Stabilize_Kd * S;
+        // Current body angular vel (deg/s)
+        const FVector omegaBodyDeg = Xf.InverseTransformVectorNoScale(Mesh->GetPhysicsAngularVelocityInDegrees());
 
-        // BODY axes: X=roll, Y=pitch, Z=yaw
-        FVector AlphaBodyDeg2(
-            /*roll*/  Kp * ErrBodyDeg.Z - Kd * OmegaBodyDeg2.X,
-            /*pitch*/ Kp * ErrBodyDeg.X - Kd * OmegaBodyDeg2.Y,
-            /*yaw  */ 0.f               - Kd * OmegaBodyDeg2.Z   // no heading correction, only damping
+        // --- Choose a gentle "rate per error" (deg/s per deg). Scale by hold strength S. ---
+        // These are intentionally small so correction is slow/smooth.
+        const float kRatePerDeg   = Stabilize_Kp * S;   // e.g., 0.3–0.8 works well
+        const float kRateDamping  = Stabilize_Kd * S;   // e.g., 0.4–0.9
+        const float maxStabRate   = 360.f;              // clamp target body rates (deg/s)
+
+        // Target BODY angular rates: roll=X, pitch=Y, yaw=Z (yaw stays 0 to preserve heading)
+        const float rollRateTgt  = FMath::Clamp(-kRatePerDeg * rollErrDeg,  -maxStabRate, maxStabRate);
+        const float pitchRateTgt = FMath::Clamp(-kRatePerDeg * pitchErrDeg, -maxStabRate, maxStabRate);
+        const FVector omegaTgtBodyDeg(rollRateTgt, pitchRateTgt, 0.f);
+
+        // PD on rate in BODY space: alpha = Kp*(ω_tgt - ω) - Kd*ω
+        const FVector rateErr = omegaTgtBodyDeg - omegaBodyDeg;
+        const FVector alphaBodyDeg = (rateErr * kRatePerDeg) - (omegaBodyDeg * kRateDamping);
+
+        // τ_body = I ∘ α_body  (diagonal inertia; BODY X→Ix, Y→Iy, Z→Iz)
+        FVector tauBody(
+            alphaBodyDeg.X * I.X,
+            alphaBodyDeg.Y * I.Y,
+            // Yaw: only damping (no leveling), keep heading steady
+            (-kRateDamping * omegaBodyDeg.Z) * I.Z
         );
 
-        FVector TauBody2(
-            AlphaBodyDeg2.X * I.X,
-            AlphaBodyDeg2.Y * I.Y,
-            AlphaBodyDeg2.Z * I.Z
-        );
+        // Clamp & apply
+        const float maxT = Stabilize_MaxTorque * (0.5f + 0.5f * S); // stronger as you hold more
+        if (tauBody.Size() > maxT) tauBody = tauBody.GetSafeNormal() * maxT;
 
-        const float MaxTStab = Stabilize_MaxTorque * (0.5f + 0.5f * S);
-        if (TauBody2.Size() > MaxTStab) TauBody2 = TauBody2.GetSafeNormal() * MaxTStab;
+        const FVector tauWS = Xf.TransformVectorNoScale(tauBody);
+        Mesh->AddTorqueInDegrees(tauWS, NAME_None, false);
 
-        const FVector TauWS_Stab = Xf.TransformVectorNoScale(TauBody2);
-        Mesh->AddTorqueInDegrees(TauWS_Stab, NAME_None, false);
-
-        // Linear bleed: kill side-slip (local Y/Z) and world vertical bob
-        const float BleedScale = (0.5f + 0.5f * S);
-        VelLS.Y = FMath::FInterpTo(VelLS.Y, 0.f, DeltaSeconds, StabilizeLinBleedRate  * BleedScale);
-        VelLS.Z = FMath::FInterpTo(VelLS.Z, 0.f, DeltaSeconds, StabilizeLinBleedRate  * BleedScale);
+        // --- Gentle linear bleed while stabilizing (side/up & world-Z) ---
+        const float bleed = (0.5f + 0.5f * S);
+        VelLS.Y = FMath::FInterpTo(VelLS.Y, 0.f, DeltaSeconds, StabilizeLinBleedRate  * bleed);
+        VelLS.Z = FMath::FInterpTo(VelLS.Z, 0.f, DeltaSeconds, StabilizeLinBleedRate  * bleed);
 
         VelWS = Xf.TransformVectorNoScale(VelLS);
-        VelWS.Z = FMath::FInterpTo(VelWS.Z, 0.f, DeltaSeconds, StabilizeVertBleedRate * BleedScale);
-
-        // Optional: boost near ground
-        FHitResult Hit;
-        const FVector P = Mesh->GetComponentLocation();
-        const bool bNearGround = GetWorld()->LineTraceSingleByChannel(Hit, P, P - FVector(0,0,GroundProbeDist), ECC_Visibility);
-        if (bNearGround)
-        {
-            VelWS.Z = FMath::FInterpTo(VelWS.Z, 0.f, DeltaSeconds, StabilizeVertBleedRate * GroundBoost);
-            Mesh->SetAngularDamping(FMath::Max(Mesh->GetAngularDamping(), StabilizeAngularDamping * GroundBoost));
-        }
+        VelWS.Z = FMath::FInterpTo(VelWS.Z, 0.f, DeltaSeconds, StabilizeVertBleedRate * bleed);
 
         Mesh->SetPhysicsLinearVelocity(VelWS, false);
     }
