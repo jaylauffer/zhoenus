@@ -99,56 +99,43 @@ public:
     UFUNCTION()
     void OnMouseY(const FInputActionValue& Value);
     
-    // === Attitude stabilizer (body-space PD) ===
-    UPROPERTY(EditAnywhere, Category="Stabilizer")
-    float Stab_Kp = 6.0f;          // deg torque per deg error (after inertia scaling)
-    UPROPERTY(EditAnywhere, Category="Stabilizer")
-    float Stab_Kd = 0.6f;          // deg torque per deg/s
-    UPROPERTY(EditAnywhere, Category="Stabilizer")
-    float StabDeadzone = 0.05f;    // input neutral threshold
-    UPROPERTY(EditAnywhere, Category="Stabilizer")
-    bool  bStabilizeYaw = false;   // hold heading or leave yaw free
-    UPROPERTY(EditAnywhere, Category="Stabilizer")
-    float StabMaxTorque = 200000.f;// safety clamp (tune for your mesh)
-
-    UPROPERTY(EditAnywhere, Category="Stabilizer")
-    float ActiveAngularDamping = 0.2f;
-    UPROPERTY(EditAnywhere, Category="Stabilizer")
-    float IdleAngularDamping   = 8.0f;
-
-    // === Linear drift taming (side/up bleed when idle) ===
-    //UPROPERTY(EditAnywhere, Category="Stabilizer|Linear")
-    //float LinBleedRate = 2.0f;     // FInterpTo speed (per second) for Y/Z velocity → 0
-    UPROPERTY(EditAnywhere, Category="Stabilizer|Linear")
-    float LinDeadzone  = 2.0f;     // ignore tiny cm/s noise
-
-    // --- “Arcade rate” control ---
-    UPROPERTY(EditAnywhere, Category="Arcade")
+    // Rotation rates (deg/s) at full stick
+    UPROPERTY(EditAnywhere, Category="ArcadeRot")
     float MaxPitchRateDeg = 180.f;
-    UPROPERTY(EditAnywhere, Category="Arcade")
+    UPROPERTY(EditAnywhere, Category="ArcadeRot")
     float MaxYawRateDeg   = 220.f;
-    UPROPERTY(EditAnywhere, Category="Arcade")
+    UPROPERTY(EditAnywhere, Category="ArcadeRot")
     float MaxRollRateDeg  = 260.f;
 
-    // PD on angular *rate* (omega) → snappy response
-    UPROPERTY(EditAnywhere, Category="Arcade")
-    float Rate_Kp = 8.0f;      // how fast to chase target rate
-    UPROPERTY(EditAnywhere, Category="Arcade")
-    float Rate_Kd = 0.2f;      // damps overshoot/oscillation
-    UPROPERTY(EditAnywhere, Category="Arcade")
-    float MaxCtrlTorque = 250000.f; // safety clamp
+    // PD gains on angular rate (body space)
+    UPROPERTY(EditAnywhere, Category="ArcadeRot")
+    float Rate_Kp = 10.0f;
+    UPROPERTY(EditAnywhere, Category="ArcadeRot")
+    float Rate_Kd = 0.25f;
+    UPROPERTY(EditAnywhere, Category="ArcadeRot")
+    float MaxCtrlTorque = 250000.f;
 
-    // Forward speed hold (arcade thrust)
-    UPROPERTY(EditAnywhere, Category="Arcade")
-    float MaxForwardSpeed = 3000.f; // hard cap
-    UPROPERTY(EditAnywhere, Category="Arcade")
-    float Speed_Kp = 8000.f;  // N per (cm/s) error (tune for your mass)
-    UPROPERTY(EditAnywhere, Category="Arcade")
-    float Speed_Kd = 50.f;    // N per (cm/s^2) (optional)
+    // Optional input shaping and axis flips
+    UPROPERTY(EditAnywhere, Category="ArcadeRot")
+    float Expo = 0.25f; // 0..0.5, makes small inputs more precise
+    UPROPERTY(EditAnywhere, Category="ArcadeRot")
+    bool bInvertMousePitch = true; // common for “flight” feel
+    UPROPERTY(EditAnywhere, Category="ArcadeRot")
+    bool bInvertYaw = false;
+    UPROPERTY(EditAnywhere, Category="ArcadeRot")
+    bool bInvertRoll = false;
 
-    // Input shaping (makes center feel crisp)
-    UPROPERTY(EditAnywhere, Category="Arcade")
-    float Expo = 0.25f; // 0..0.5; raises small inputs
+    // Linear drift taming
+    UPROPERTY(EditAnywhere, Category="ArcadeLin")
+    float LinBleedRate = 3.0f;   // how quickly side/up velocity damps (1/s)
+    UPROPERTY(EditAnywhere, Category="ArcadeLin")
+    float LinDeadzone  = 2.0f;   // cm/s
+
+    // Angular damping for feel
+    UPROPERTY(EditAnywhere, Category="ArcadeRot")
+    float DampingWhenPiloting = 0.1f;
+    UPROPERTY(EditAnywhere, Category="ArcadeRot")
+    float DampingWhenIdle     = 2.5f;
     
 protected:
 	/** StaticMesh component that will be the visuals for our flying pawn */

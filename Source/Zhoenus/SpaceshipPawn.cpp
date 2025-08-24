@@ -111,100 +111,116 @@ void ASpaceshipPawn::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
-    // keep your sticky-mouse decay
-    if (LastInputSource == EInputSource::Mouse && MouseStickDecay > 0.f) {
+    // Sticky mouse decay (unchanged)
+    if (LastInputSource == EInputSource::Mouse && MouseStickDecay > 0.f)
+    {
         CachedInput.X = FMath::FInterpTo(CachedInput.X, 0.f, DeltaSeconds, MouseStickDecay);
         CachedInput.Y = FMath::FInterpTo(CachedInput.Y, 0.f, DeltaSeconds, MouseStickDecay);
     }
 
     UStaticMeshComponent* Mesh = GetPlaneMesh();
     const FTransform& Xf = Mesh->GetComponentTransform();
-    const FVector Inertia = Mesh->GetInertiaTensor(NAME_None); // Ix,Iy,Iz
+    const FVector Inertia = Mesh->GetInertiaTensor(NAME_None);
     const float Mass = Mesh->GetMass();
 
-    // --- Input shaping (expo) ---
+    // ======================
+    // 1) THRUST AS ACCELERATION (your original intent)
+    // ======================
+    // Thrust input W in [-1,1] → acceleration cm/s^2 → force = m*a along forward
+    // Keep your Acceleration scalar; add a tiny smoothing to avoid jitter.
+    const double ThrustInput = FMath::Clamp(CachedInput.W, -1.0, 1.0);
+    CurrentAcceleration = FMath::FInterpTo(CurrentAcceleration, ThrustInput * Acceleration, DeltaSeconds, 10.f);
+
+    if (!FMath::IsNearlyZero(CurrentAcceleration))
+    {
+        const FVector ForceWS = Mesh->GetForwardVector() * (CurrentAcceleration * Mass);
+        Mesh->AddForce(ForceWS);
+    }
+
+    // Clamp forward speed (keep your clamp)
+    FVector VelWS = Mesh->GetPhysicsLinearVelocity();
+    FVector VelLS = Xf.InverseTransformVectorNoScale(VelWS);
+    VelLS.X = FMath::Clamp(VelLS.X, MinSpeed, MaxSpeed);
+    CurrentForwardSpeed = VelLS.X;
+
+    // ======================
+    // 2) ROTATION AS TARGET RATE (snappy)
+    // ======================
+
+    // Input shaping (“expo”) and optional axis flips
     auto ExpoShape = [this](float v){
         const float a = FMath::Clamp(Expo, 0.f, 0.49f);
-        return v * (1.f - a) + v*v*v * a;  // common “expo” curve
+        return v * (1.f - a) + v*v*v * a;
     };
-    const float InPitch = ExpoShape(FMath::Clamp(CachedInput.X, -1.f, 1.f));
-    const float InYaw   = ExpoShape(FMath::Clamp(CachedInput.Y, -1.f, 1.f));
-    const float InRoll  = ExpoShape(FMath::Clamp(CachedInput.Z, -1.f, 1.f));
 
-    // --- Target angular rates in BODY space (deg/s) ---
-    const FVector OmegaTargetBodyDeg(
-        InPitch * MaxPitchRateDeg,
-        InYaw   * MaxYawRateDeg,
-        InRoll  * MaxRollRateDeg
+    //no idea way GPT gave me these f'd ..
+    float InPitch = FMath::Clamp(CachedInput.X, -1.f, 1.f);
+    float InYaw   = FMath::Clamp(CachedInput.Y, -1.f, 1.f);
+    float InRoll  = FMath::Clamp(CachedInput.Z, -1.f, 1.f);
+
+    InPitch = ExpoShape( bInvertMousePitch ? -InPitch : InPitch );
+    InYaw   = ExpoShape( bInvertYaw        ? -InYaw   : InYaw   );
+    InRoll  = ExpoShape( bInvertRoll       ? -InRoll  : InRoll  );
+
+    // Target angular rates in BODY space (deg/s)
+    const FVector OmegaTgtBodyDeg(
+        InPitch * MaxPitchRateDeg,   // Pitch about Right
+        InYaw   * MaxYawRateDeg,     // Yaw   about Up
+        InRoll  * MaxRollRateDeg     // Roll  about Forward
     );
 
-    // --- Current angular rate (BODY, deg/s) ---
-    const FVector OmegaWS_Deg = Mesh->GetPhysicsAngularVelocityInDegrees();
+    // Current angular velocity (BODY, deg/s)
+    const FVector OmegaWS_Deg  = Mesh->GetPhysicsAngularVelocityInDegrees();
     const FVector OmegaBodyDeg = Xf.InverseTransformVectorNoScale(OmegaWS_Deg);
 
-    // --- PD on rate: alpha_body (deg/s^2) = Kp*(omega_tgt - omega) - Kd*omega ---
-    const FVector RateErr = OmegaTargetBodyDeg - OmegaBodyDeg;
+    // PD on rate: alpha_body (deg/s^2) = Kp*(omega_tgt - omega) - Kd*omega
+    const FVector RateErr = OmegaTgtBodyDeg - OmegaBodyDeg;
     FVector AlphaBodyDeg = Rate_Kp * RateErr - Rate_Kd * OmegaBodyDeg;
 
-    // --- Torque in BODY using diagonal inertia: tau_body = I ∘ alpha_body ---
+    // τ_body = I ∘ α_body  (diagonal inertia)
     FVector TauBody(
         AlphaBodyDeg.X * Inertia.X,
         AlphaBodyDeg.Y * Inertia.Y,
         AlphaBodyDeg.Z * Inertia.Z
     );
 
-    // Clamp and transform to WORLD
-    if (TauBody.Size() > MaxCtrlTorque) {
+    // Clamp, transform to world, apply
+    if (TauBody.Size() > MaxCtrlTorque)
+    {
         TauBody = TauBody.GetSafeNormal() * MaxCtrlTorque;
     }
     const FVector TauWS = Xf.TransformVectorNoScale(TauBody);
-
-    // --- Apply torque (snappy rotation toward commanded rates) ---
     Mesh->AddTorqueInDegrees(TauWS, NAME_None, false);
 
-    // --- Optional: bump angular damping low while piloting for crispness ---
+    // Angular damping feel
     const bool bPiloting =
-        (FMath::Abs(InPitch) > 0.02f) || (FMath::Abs(InYaw) > 0.02f) || (FMath::Abs(InRoll) > 0.02f);
-    Mesh->SetAngularDamping(bPiloting ? 0.1f : 2.5f);
+        (FMath::Abs(InPitch) > 0.02f) || (FMath::Abs(InYaw) > 0.02f) || (FMath::Abs(InRoll) > 0.02f) ||
+        (FMath::Abs(ThrustInput) > 0.02f);
+    Mesh->SetAngularDamping(bPiloting ? DampingWhenPiloting : DampingWhenIdle);
 
-    // ===== Arcade speed hold along +X (forward) =====
-    // Desired forward speed from CachedInput.W (or keep your CurrentAcceleration flow if you prefer)
-    const float ForwardTgt = FMath::Clamp(CachedInput.W, -1.f, 1.f) * MaxForwardSpeed;
+    // ======================
+    // 3) LINEAR DRIFT TAMING (side/up bleed)
+    // ======================
+    if (!bPiloting)
+    {
+        if (FMath::Abs(VelLS.Y) < LinDeadzone) VelLS.Y = 0.f;
+        if (FMath::Abs(VelLS.Z) < LinDeadzone) VelLS.Z = 0.f;
 
-    // Current local velocity
-    FVector VelWS = Mesh->GetPhysicsLinearVelocity();
-    FVector VelLS = Xf.InverseTransformVectorNoScale(VelWS);
+        VelLS.Y = FMath::FInterpTo(VelLS.Y, 0.f, DeltaSeconds, LinBleedRate);
+        VelLS.Z = FMath::FInterpTo(VelLS.Z, 0.f, DeltaSeconds, LinBleedRate);
+    }
 
-    const float vf = VelLS.X;
-    const float vErr = ForwardTgt - vf;
+    // Write velocity back and enforce forward clamp
+    VelWS = Xf.TransformVectorNoScale(VelLS);
+    Mesh->SetPhysicsLinearVelocity(VelWS, false);
 
-    // Simple PD on forward speed → force along forward
-    // Approximate dv/dt with finite difference from physics; we’ll omit it if noisy.
-    static float PrevVf = 0.f;
-    const float dvdt = (DeltaSeconds > KINDA_SMALL_NUMBER) ? (vf - PrevVf) / DeltaSeconds : 0.f;
-    PrevVf = vf;
-
-    float FwdForceMag = Speed_Kp * vErr - Speed_Kd * dvdt;
-    // Keep within reasonable thrust; optional clamp:
-    const float MaxFwdForce = Mass * 9000.f; // ~9g accel cap; tune
-    FwdForceMag = FMath::Clamp(FwdForceMag, -MaxFwdForce, MaxFwdForce);
-
-    const FVector FwdForceWS = Mesh->GetForwardVector() * FwdForceMag;
-    Mesh->AddForce(FwdForceWS);
-
-    // ===== Lateral drift taming (arcade) =====
-    // Bleed Y/Z local velocity toward 0 when pilot isn’t commanding lateral movement (we aren’t here).
-    const float LinBleedRate = 3.0f; // faster = snappier side-slip kill
-    VelLS.Y = FMath::FInterpTo(VelLS.Y, 0.f, DeltaSeconds, LinBleedRate);
-    VelLS.Z = FMath::FInterpTo(VelLS.Z, 0.f, DeltaSeconds, LinBleedRate);
-
-    // Enforce forward speed clamp
-    VelLS.X = FMath::Clamp(VelLS.X, -MaxForwardSpeed, MaxForwardSpeed);
-
-    Mesh->SetPhysicsLinearVelocity(Xf.TransformVectorNoScale(VelLS), false);
-
-    // Fire logic unchanged
+    // Fire
     FireShot();
+    
+//    const FVector p = Mesh->GetComponentLocation();
+//    DrawDebugLine(GetWorld(), p, p + Mesh->GetForwardVector()*150, FColor::Red,   false, 0,0,2); // X
+//    DrawDebugLine(GetWorld(), p, p + Mesh->GetRightVector()  *150, FColor::Green, false, 0,0,2); // Y
+//    DrawDebugLine(GetWorld(), p, p + Mesh->GetUpVector()     *150, FColor::Blue,  false, 0,0,2); // Z
 }
 
 
@@ -260,14 +276,14 @@ void ASpaceshipPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
             if (MouseXAction) { EnhancedInputComponent->BindAction(MouseXAction, ETriggerEvent::Triggered, this, &ASpaceshipPawn::OnMouseX); }
             if (MouseYAction) { EnhancedInputComponent->BindAction(MouseYAction, ETriggerEvent::Triggered, this, &ASpaceshipPawn::OnMouseY); }
 		}
-		else if (PC->PlayerInput)
-		{
-			
-			InputComponent->BindAxis("Thrust", this, &ASpaceshipPawn::OrigThrustInput);
-			InputComponent->BindAxis("MoveUp", this, &ASpaceshipPawn::MoveUpInput);
-			InputComponent->BindAxis("MoveRight", this, &ASpaceshipPawn::RotateRightInput); //left stick
-			InputComponent->BindAxis("RotateRight", this, &ASpaceshipPawn::MoveRightInput); //right
-		}
+//		else if (PC->PlayerInput)
+//		{
+//			
+//			InputComponent->BindAxis("Thrust", this, &ASpaceshipPawn::OrigThrustInput);
+//			InputComponent->BindAxis("MoveUp", this, &ASpaceshipPawn::MoveUpInput);
+//			InputComponent->BindAxis("MoveRight", this, &ASpaceshipPawn::RotateRightInput); //left stick
+//			InputComponent->BindAxis("RotateRight", this, &ASpaceshipPawn::MoveRightInput); //right
+//		}
 	}
 }
 
@@ -296,7 +312,7 @@ void ASpaceshipPawn::OrigThrustInput(float Val)
 
 void ASpaceshipPawn::ThrustInput(const FInputActionValue& Value)
 {
-	float Thrust = Value.Get<float>();
+	float Thrust = -Value.Get<float>();
 	CachedInput.W = FMath::Clamp(Thrust, -1.f, 1.f);
 }
 
