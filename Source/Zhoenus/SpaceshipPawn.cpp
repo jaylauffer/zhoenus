@@ -111,80 +111,76 @@ void ASpaceshipPawn::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
-    // Sticky mouse decay (unchanged)
+    // Sticky mouse decay (only for look axes)
     if (LastInputSource == EInputSource::Mouse && MouseStickDecay > 0.f)
     {
-        CachedInput.X = FMath::FInterpTo(CachedInput.X, 0.f, DeltaSeconds, MouseStickDecay);
-        CachedInput.Y = FMath::FInterpTo(CachedInput.Y, 0.f, DeltaSeconds, MouseStickDecay);
+        CachedInput.X = FMath::FInterpTo(CachedInput.X, 0.f, DeltaSeconds, MouseStickDecay); // Pitch
+        CachedInput.Y = FMath::FInterpTo(CachedInput.Y, 0.f, DeltaSeconds, MouseStickDecay); // Yaw
     }
 
     UStaticMeshComponent* Mesh = GetPlaneMesh();
+    if (!Mesh) return;
+
     const FTransform& Xf = Mesh->GetComponentTransform();
-    const FVector Inertia = Mesh->GetInertiaTensor(NAME_None);
-    const float Mass = Mesh->GetMass();
+    const FVector     I  = Mesh->GetInertiaTensor(NAME_None); // (Ix about +X/Forward, Iy about +Y/Right, Iz about +Z/Up)
+    const float       M  = Mesh->GetMass();
 
-    // ======================
-    // 1) THRUST AS ACCELERATION (your original intent)
-    // ======================
-    // Thrust input W in [-1,1] → acceleration cm/s^2 → force = m*a along forward
-    // Keep your Acceleration scalar; add a tiny smoothing to avoid jitter.
-    const double ThrustInput = FMath::Clamp(CachedInput.W, -1.0, 1.0);
+    // =========================================================
+    // 1) THRUST AS ACCELERATION (force = m * a along +Forward)
+    // =========================================================
+    const float ThrustInput = FMath::Clamp((float)CachedInput.W, -1.f, 1.f);
     CurrentAcceleration = FMath::FInterpTo(CurrentAcceleration, ThrustInput * Acceleration, DeltaSeconds, 10.f);
-
     if (!FMath::IsNearlyZero(CurrentAcceleration))
     {
-        const FVector ForceWS = Mesh->GetForwardVector() * (CurrentAcceleration * Mass);
-        Mesh->AddForce(ForceWS);
+        Mesh->AddForce(Mesh->GetForwardVector() * (CurrentAcceleration * M));
     }
 
-    // Clamp forward speed (keep your clamp)
+    // Local velocity: clamp forward speed, keep for drift bleed
     FVector VelWS = Mesh->GetPhysicsLinearVelocity();
     FVector VelLS = Xf.InverseTransformVectorNoScale(VelWS);
     VelLS.X = FMath::Clamp(VelLS.X, MinSpeed, MaxSpeed);
     CurrentForwardSpeed = VelLS.X;
 
-    // ======================
-    // 2) ROTATION AS TARGET RATE (snappy)
-    // ======================
-
-    // Input shaping (“expo”) and optional axis flips
+    // =========================================================
+    // 2) ROTATION AS TARGET RATE (BODY order: X=roll, Y=pitch, Z=yaw)
+    // =========================================================
     auto ExpoShape = [this](float v){
         const float a = FMath::Clamp(Expo, 0.f, 0.49f);
-        return v * (1.f - a) + v*v*v * a;
+        return v * (1.f - a) + v * v * v * a;
     };
 
-    //no idea way GPT gave me these f'd ..
-    float InPitch = FMath::Clamp(CachedInput.X, -1.f, 1.f);
-    float InYaw   = FMath::Clamp(CachedInput.Y, -1.f, 1.f);
-    float InRoll  = FMath::Clamp(CachedInput.Z, -1.f, 1.f);
+    float InPitch = ExpoShape(FMath::Clamp((float)CachedInput.X, -1.f, 1.f)); // Pitch command
+    float InYaw   = ExpoShape(FMath::Clamp((float)CachedInput.Y, -1.f, 1.f)); // Yaw command
+    float InRoll  = ExpoShape(FMath::Clamp((float)CachedInput.Z, -1.f, 1.f)); // Roll command
 
-    InPitch = ExpoShape( bInvertMousePitch ? -InPitch : InPitch );
-    InYaw   = ExpoShape( bInvertYaw        ? -InYaw   : InYaw   );
-    InRoll  = ExpoShape( bInvertRoll       ? -InRoll  : InRoll  );
+    // Optional direction inversions (apply here once)
+    if (bInvertMousePitch) InPitch = -InPitch;
+    if (bInvertYaw)        InYaw   = -InYaw;
+    if (bInvertRoll)       InRoll  = -InRoll;
 
-    // Target angular rates in BODY space (deg/s)
-    const FVector OmegaTgtBodyDeg(
-        InPitch * MaxPitchRateDeg,   // Pitch about Right
-        InYaw   * MaxYawRateDeg,     // Yaw   about Up
-        InRoll  * MaxRollRateDeg     // Roll  about Forward
-    );
+    // Targets in BODY axes (X=roll, Y=pitch, Z=yaw)
+    const float RollRateTgt  = InRoll  * MaxRollRateDeg;   // about Forward (+X)
+    const float PitchRateTgt = InPitch * MaxPitchRateDeg;  // about Right   (+Y)
+    const float YawRateTgt   = InYaw   * MaxYawRateDeg;    // about Up      (+Z)
 
-    // Current angular velocity (BODY, deg/s)
+    const FVector OmegaTgtBodyDeg(RollRateTgt, PitchRateTgt, YawRateTgt);
+
+    // Current angular velocity in BODY (deg/s)
     const FVector OmegaWS_Deg  = Mesh->GetPhysicsAngularVelocityInDegrees();
     const FVector OmegaBodyDeg = Xf.InverseTransformVectorNoScale(OmegaWS_Deg);
 
-    // PD on rate: alpha_body (deg/s^2) = Kp*(omega_tgt - omega) - Kd*omega
-    const FVector RateErr = OmegaTgtBodyDeg - OmegaBodyDeg;
-    FVector AlphaBodyDeg = Rate_Kp * RateErr - Rate_Kd * OmegaBodyDeg;
+    // PD on rate (component-wise in BODY)
+    const FVector RateErr      = OmegaTgtBodyDeg - OmegaBodyDeg;
+    FVector AlphaBodyDeg       = Rate_Kp * RateErr - Rate_Kd * OmegaBodyDeg;
 
     // τ_body = I ∘ α_body  (diagonal inertia)
     FVector TauBody(
-        AlphaBodyDeg.X * Inertia.X,
-        AlphaBodyDeg.Y * Inertia.Y,
-        AlphaBodyDeg.Z * Inertia.Z
+        AlphaBodyDeg.X * I.X,  // roll channel → Ix
+        AlphaBodyDeg.Y * I.Y,  // pitch channel → Iy
+        AlphaBodyDeg.Z * I.Z   // yaw channel → Iz
     );
 
-    // Clamp, transform to world, apply
+    // Clamp torque, transform to WORLD, apply
     if (TauBody.Size() > MaxCtrlTorque)
     {
         TauBody = TauBody.GetSafeNormal() * MaxCtrlTorque;
@@ -198,9 +194,9 @@ void ASpaceshipPawn::Tick(float DeltaSeconds)
         (FMath::Abs(ThrustInput) > 0.02f);
     Mesh->SetAngularDamping(bPiloting ? DampingWhenPiloting : DampingWhenIdle);
 
-    // ======================
-    // 3) LINEAR DRIFT TAMING (side/up bleed)
-    // ======================
+    // =========================================================
+    // 3) LINEAR DRIFT TAMING (side/up bleed when not piloting)
+    // =========================================================
     if (!bPiloting)
     {
         if (FMath::Abs(VelLS.Y) < LinDeadzone) VelLS.Y = 0.f;
@@ -210,19 +206,19 @@ void ASpaceshipPawn::Tick(float DeltaSeconds)
         VelLS.Z = FMath::FInterpTo(VelLS.Z, 0.f, DeltaSeconds, LinBleedRate);
     }
 
-    // Write velocity back and enforce forward clamp
+    // Write velocity back
     VelWS = Xf.TransformVectorNoScale(VelLS);
     Mesh->SetPhysicsLinearVelocity(VelWS, false);
 
-    // Fire
+    // Weapons
     FireShot();
-    
-//    const FVector p = Mesh->GetComponentLocation();
-//    DrawDebugLine(GetWorld(), p, p + Mesh->GetForwardVector()*150, FColor::Red,   false, 0,0,2); // X
-//    DrawDebugLine(GetWorld(), p, p + Mesh->GetRightVector()  *150, FColor::Green, false, 0,0,2); // Y
-//    DrawDebugLine(GetWorld(), p, p + Mesh->GetUpVector()     *150, FColor::Blue,  false, 0,0,2); // Z
-}
 
+    // // Debug axes (optional)
+    // const FVector p = Mesh->GetComponentLocation();
+    // DrawDebugLine(GetWorld(), p, p + Mesh->GetForwardVector()*150, FColor::Red,   false, 0,0,2); // +X (Forward)
+    // DrawDebugLine(GetWorld(), p, p + Mesh->GetRightVector()  *150, FColor::Green, false, 0,0,2); // +Y (Right)
+    // DrawDebugLine(GetWorld(), p, p + Mesh->GetUpVector()     *150, FColor::Blue,  false, 0,0,2); // +Z (Up)
+}
 
 void ASpaceshipPawn::NotifyHit(class UPrimitiveComponent* MyComp, class AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
 {
@@ -300,7 +296,7 @@ void ASpaceshipPawn::OnMouseY(const FInputActionValue& Value)
     LastInputSource = EInputSource::Mouse;
     // Mouse Y → pitch stick (CachedInput.X); invert if you prefer flight-style
     const float dy = Value.Get<float>();
-    CachedInput.X = FMath::Clamp(CachedInput.X + dy * MouseStickSensitivity, -1.f, 1.f);
+    CachedInput.X = FMath::Clamp(CachedInput.X + -(dy) * MouseStickSensitivity, -1.f, 1.f);
 }
 
 void ASpaceshipPawn::OrigThrustInput(float Val)
