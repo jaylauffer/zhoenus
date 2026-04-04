@@ -1,0 +1,12 @@
+../unreal/GenerateProjectFiles.sh -project /Volumes/Micro-Data-Transfer/Zhoenus/zhoenus/zhoenus.uproject -game -editor
+
+For touch UI - two sticks, press hard with right thumb to fire ZapEms, press hard with the left thumb to stabilize and align to the horizen.
+-- we may wish to have two 'engage' buttons (checkbox/stays stuck when clicked) to enable/disable the thumb pressure behavior.. so press the toggle stablize or the toggle fire and then based on the pressureof the thumb press 0.0 to 1.0 of stabilize/fire input .. of course would require calibration in a ui/control setup screen.
+
+For the song playlist, the goal is that it may be dynamic, and be feed for example on a mobile device from the user's local playlist .. or via a 'station' that is broadcasting/streaming .. these are ambitious goals for the future, requiring a baked playlist is the primary impedement.
+
+On IOS we could ideally plug into Apple Music and then play songs/game play sessions via the user's configured playlist.
+(as an example)
+
+Regarding the reticle, it needs a 'range-finder' the projectiles only go so far, so a ray-trace that hits a Donut can 'flash' the reticle red - the reticle also needs to be projected out a bit further from the ship (my opinion it's a bit distracting, it's still too thick).
+

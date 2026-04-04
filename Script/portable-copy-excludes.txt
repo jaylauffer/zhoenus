@@ -1,0 +1,22 @@
+# Rebuildable project copy for Linux / Raspberry Pi work.
+# Keep source, config, content, plugins, and the .uproject.
+# Drop generated Unreal state plus Apple platform packaging residue.
+
+# Unreal generated state
+/Intermediate/
+/Saved/
+/DerivedDataCache/
+/Binaries/
+
+# Apple platform packaging and IDE scaffolding
+/Build/Mac/
+/Build/IOS/
+/IOS/
+/Zhoenus (Mac).xcworkspace/
+/Zhoenus (IOS).xcworkspace/
+/Zhoenus (TVOS).xcworkspace/
+/Zhoenus (VisionOS).xcworkspace/
+
+# Finder and AppleDouble residue
+.DS_Store
+._*

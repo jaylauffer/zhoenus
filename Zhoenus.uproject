@@ -1,0 +1,178 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "../unreal",
+  "Category": "",
+  "Description": "",
+  "Modules": [
+    {
+      "Name": "Zhoenus",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "ZhoenusEditorExt",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "Niagara",
+      "Enabled": true
+    },
+    {
+      "Name": "ChaosCloth",
+      "Enabled": false
+    },
+    {
+      "Name": "ChaosClothEditor",
+      "Enabled": false
+    },
+    {
+      "Name": "RuntimePhysXCooking",
+      "Enabled": false
+    },
+    {
+      "Name": "GitSourceControl",
+      "Enabled": false
+    },
+    {
+      "Name": "PlasticSourceControl",
+      "Enabled": false
+    },
+    {
+      "Name": "FieldSystemPlugin",
+      "Enabled": true
+    },
+    {
+      "Name": "ModelingToolsEditorMode",
+      "Enabled": true
+    },
+    {
+      "Name": "StaticMeshEditorModeling",
+      "Enabled": true
+    },
+    {
+      "Name": "CLionSourceCodeAccess",
+      "Enabled": false
+    },
+    {
+      "Name": "CodeLiteSourceCodeAccess",
+      "Enabled": false
+    },
+    {
+      "Name": "KDevelopSourceCodeAccess",
+      "Enabled": false
+    },
+    {
+      "Name": "NiagaraFluids",
+      "Enabled": true
+    },
+    {
+      "Name": "Paper2D",
+      "Enabled": false
+    },
+    {
+      "Name": "PerforceSourceControl",
+      "Enabled": false
+    },
+    {
+      "Name": "RiderSourceCodeAccess",
+      "Enabled": false
+    },
+    {
+      "Name": "SubversionSourceControl",
+      "Enabled": false
+    },
+    {
+      "Name": "Takes",
+      "Enabled": true
+    },
+    {
+      "Name": "Water",
+      "Enabled": true
+    },
+    {
+      "Name": "Metasound",
+      "Enabled": true
+    },
+    {
+      "Name": "CommonUI",
+      "Enabled": true
+    },
+    {
+      "Name": "RawInput",
+      "Enabled": true
+    },
+    {
+      "Name": "AppleProResMedia",
+      "Enabled": true,
+      "SupportedTargetPlatforms": [
+        "Win64"
+      ]
+    },
+    {
+      "Name": "MediaFrameworkUtilities",
+      "Enabled": true
+    },
+    {
+      "Name": "AppleProResDecoderElectra",
+      "Enabled": true,
+      "SupportedTargetPlatforms": [
+        "Win64",
+        "Mac"
+      ]
+    },
+    {
+      "Name": "AppleMoviePlayer",
+      "Enabled": false
+    },
+    {
+      "Name": "ElectraPlayer",
+      "Enabled": true
+    },
+    {
+      "Name": "ElectraCodecs",
+      "Enabled": true
+    },
+    {
+      "Name": "ElectraCDM",
+      "Enabled": true
+    },
+    {
+      "Name": "ElectraUtil",
+      "Enabled": true
+    },
+    {
+      "Name": "AvidDNxHDDecoderElectra",
+      "Enabled": true,
+      "SupportedTargetPlatforms": [
+        "Win64"
+      ]
+    },
+    {
+      "Name": "VisualStudioTools",
+      "Enabled": true,
+      "SupportedTargetPlatforms": [
+        "Win64"
+      ]
+    }
+  ],
+  "TargetPlatforms": [
+    "Android",
+    "AllDesktop",
+    "IOS",
+    "LinuxNoEditor",
+    "LinuxAArch64NoEditor",
+    "MacNoEditor",
+    "WindowsNoEditor",
+    "Windows",
+    "Mac",
+    "HoloLens",
+    "Linux",
+    "LinuxArm64"
+  ],
+  "AdditionalRootDirectories": [],
+  "AdditionalPluginDirectories": [],
+  "EpicSampleNameHash": ""
+}
