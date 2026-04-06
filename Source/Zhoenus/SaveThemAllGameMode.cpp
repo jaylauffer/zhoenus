@@ -1,4 +1,4 @@
-// Copyright 1998-2017 Epic Games, Inc. All Rights Reserved.
+//Copyright Jay Lauffer 2026
 
 #include "SaveThemAllGameMode.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -54,6 +54,7 @@ ASaveThemAllGameMode::ASaveThemAllGameMode()
 	GameStateClass = ASaveThemAllGameState::StaticClass();
 	HUDClass = ASpaceshipHUD::StaticClass();
 
+    BuildSongPlaylist();
 }
 
 void ASaveThemAllGameMode::BeginPlay()
@@ -71,7 +72,6 @@ void ASaveThemAllGameMode::BeginPlay()
 
 	GetWorldTimerManager().SetTimerForNextTick(this, &ASaveThemAllGameMode::RefreshInitialDonutTotal);
 
-	BuildSongPlaylist();
 	const int64 TotalAttempts = gi ? gi->TotalAttempts : 0;
 	StartSongForRun(TotalAttempts);
 
@@ -99,8 +99,7 @@ void ASaveThemAllGameMode::BuildSongPlaylist()
 		{
 			return;
 		}
-
-		RuntimeSongPlaylist.Add(SongPath);
+        UE_LOG(LogSaveThemAllGameMode, Log, TEXT("Found music path %s for SaveThemAll."), *NormalizedPath);
 		UniqueSongPaths.Add(SongPath);
 	};
 
@@ -108,7 +107,7 @@ void ASaveThemAllGameMode::BuildSongPlaylist()
 	{
 		AddSongPath(SongPath);
 	}
-
+    
 	if (bScanSoundDirectory)
 	{
 		TArray<FSoftObjectPath> ScannedSongPaths;
@@ -119,6 +118,23 @@ void ASaveThemAllGameMode::BuildSongPlaylist()
 		}
 	}
 
+    for (const FString& MandatorySong : FirstThreeSongPaths)
+    {
+        if(UniqueSongPaths.Remove(MandatorySong) > 0)
+        {
+            RuntimeSongPlaylist.Add(MandatorySong);
+        }
+        else
+        {
+            UE_LOG(LogSaveThemAllGameMode, Error, TEXT("Required song %s missing."), *MandatorySong);
+        }
+    }
+    
+    for (const FSoftObjectPath& SongPath : UniqueSongPaths)
+    {
+        RuntimeSongPlaylist.Add(SongPath);
+    }
+    
 	UE_LOG(LogSaveThemAllGameMode, Log, TEXT("Prepared %d runtime music entries for SaveThemAll."), RuntimeSongPlaylist.Num());
 }
 
@@ -156,21 +172,15 @@ int32 ASaveThemAllGameMode::SelectSongIndex(const int64 TotalAttempts) const
 		return INDEX_NONE;
 	}
 
-	const FString PreferredSongObjectPath = NormalizeSongObjectPath(PreferredFirstSongPath);
-	if (TotalAttempts <= 0 && !PreferredSongObjectPath.IsEmpty())
+	
+    //Note - there must be at least 3 songs in the list, we're not going to check the list size
+	if (TotalAttempts <= 2 && !FirstThreeSongPaths.IsEmpty())
 	{
-		const int32 PreferredSongIndex = RuntimeSongPlaylist.IndexOfByPredicate([&PreferredSongObjectPath](const FSoftObjectPath& SongPath)
-		{
-			return SongPath.ToString() == PreferredSongObjectPath;
-		});
-
-		if (PreferredSongIndex != INDEX_NONE)
-		{
-			return PreferredSongIndex;
-		}
+        UE_LOG(LogSaveThemAllGameMode, Log, TEXT("3-peat: Song selected: %d."), TotalAttempts);
+        return TotalAttempts;
 	}
 
-    const int32 ChoiceCount = static_cast<int32>(TotalAttempts % RuntimeSongPlaylist.Num());
+    const int32 ChoiceCount = static_cast<int32>(TotalAttempts % RuntimeSongPlaylist.Num() - 1);
 	return FMath::RandRange(0, ChoiceCount - 1);
 }
 
@@ -210,6 +220,7 @@ bool ASaveThemAllGameMode::StartSongForRun(const int64 TotalAttempts)
 		{
 			SelectedSong = LoadSongFromPath(RuntimeSongPlaylist[SongIndex]);
 			SelectedSongLabel = RuntimeSongPlaylist[SongIndex].ToString();
+            UE_LOG(LogSaveThemAllGameMode, Error, TEXT("3-peat Index %d, Selected song: %s"), SongIndex, *SelectedSongLabel);
 		}
 	}
 

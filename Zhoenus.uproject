@@ -149,13 +149,6 @@
       "SupportedTargetPlatforms": [
         "Win64"
       ]
-    },
-    {
-      "Name": "VisualStudioTools",
-      "Enabled": true,
-      "SupportedTargetPlatforms": [
-        "Win64"
-      ]
     }
   ],
   "TargetPlatforms": [

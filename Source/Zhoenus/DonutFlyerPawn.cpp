@@ -1,4 +1,4 @@
-// Copyright 1998-2017 Epic Games, Inc. All Rights Reserved.
+// Copyright 2026 Jay Lauffer
 
 #include "DonutFlyerPawn.h"
 #include "DonutFlyerAIController.h"

@@ -1,4 +1,4 @@
-// Copyright 1998-2017 Epic Games, Inc. All Rights Reserved.
+//Copyright Jay Lauffer 2026
 
 #pragma once
 
@@ -80,7 +80,11 @@ private:
 	TArray<FString> SongAssetPaths;
 
 	UPROPERTY(EditAnywhere, Config, Category = "Music")
-	FString PreferredFirstSongPath = TEXT("/Game/Sound/20220506-ode-to-ts-mono.20220506-ode-to-ts-mono");
+    TArray<FString> FirstThreeSongPaths = {
+        TEXT("/Game/Sound/Ode-to-TS-Part1.Ode-to-TS-Part1"),
+        TEXT("/Game/Sound/Ode-to-TS-Part2.Ode-to-TS-Part2"),
+        TEXT("/Game/Sound/Ode-to-TS-Part3.Ode-to-TS-Part3")
+    };
 
 	UPROPERTY(EditAnywhere, Config, Category = "Music")
 	FString FallbackSongPath = TEXT("/Game/Sound/LevelSong.LevelSong");

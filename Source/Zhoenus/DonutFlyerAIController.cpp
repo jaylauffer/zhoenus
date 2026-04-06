@@ -1,4 +1,4 @@
-// Copyright 2018 loadngo Games, All rights reserved
+// Copyright 2026 Jay Lauffer
 
 #include "DonutFlyerAIController.h"
 #include "DonutFlyerPawn.h"
