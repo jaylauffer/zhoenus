@@ -220,7 +220,7 @@ bool ASaveThemAllGameMode::StartSongForRun(const int64 TotalAttempts)
 		{
 			SelectedSong = LoadSongFromPath(RuntimeSongPlaylist[SongIndex]);
 			SelectedSongLabel = RuntimeSongPlaylist[SongIndex].ToString();
-            UE_LOG(LogSaveThemAllGameMode, Error, TEXT("3-peat Index %d, Selected song: %s"), SongIndex, *SelectedSongLabel);
+            UE_LOG(LogSaveThemAllGameMode, Error, TEXT("3-peat Number of attempts %d, Index %d, Selected song: %s"), TotalAttempts, SongIndex, *SelectedSongLabel);
 		}
 	}
 
