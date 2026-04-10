@@ -98,6 +98,29 @@ void AZapEmProjectile::BeginPlay()
 	}
 }
 
+
+void AZapEmProjectile::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
+    // Distance traveled
+    const float TravelDist = FVector::Dist(GetActorLocation(), LaunchLocation);
+
+    // Linear scale factor (1 → BaseRadius, 2 → double, etc.)
+    const float ScaleFactor = 1.f + TravelDist / ProjectileRadiusScale;
+
+    // Compute new radius, clamp to max
+    const float DesiredRadius = FMath::Clamp(BaseProjectileRadius * ScaleFactor,
+                                            BaseProjectileRadius,
+                                            MaxProjectileRadius);
+
+    // Apply it only if it changed (avoid needless updates)
+    if (!FMath::IsNearlyEqual(AggroSphere->GetUnscaledSphereRadius(), DesiredRadius, 0.1f))
+    {
+        AggroSphere->SetSphereRadius(DesiredRadius, true);
+    }
+}
+
 void AZapEmProjectile::SetAggroRadiusOverride(const float InAggroRadius)
 {
 	AggroRadiusOverride = FMath::Max(0.f, InAggroRadius);

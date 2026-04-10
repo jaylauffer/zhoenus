@@ -36,17 +36,27 @@ class AZapEmProjectile : public AActor
 	void ResetAggroPulse();
 	float ResolveAggroRadius() const;
 
-	float BaseProjectileRadius{ 12.f };
+    UPROPERTY(EditAnywhere, Category = "Dynamic Radius")
+    float BaseProjectileRadius = 12.f;          // Your BaseProjectileRadius
+
+    UPROPERTY(EditAnywhere, Category = "Dynamic Radius")
+    float MaxProjectileRadius = 800.f; // Upper bound
+
+    UPROPERTY(EditAnywhere, Category = "Dynamic Radius")
+    float ProjectileRadiusScale = 5000.f;        // Distance needed to double radius
+    
 	float ProjectileNearMissThreat{ 0.5f };
 	float ProjectileHitThreat{ 3.0f };
 	FVector BaseProjectileScale{ FVector::OneVector };
 	float AggroRadiusOverride{ 0.f };
 	FTimerHandle TimerHandle_AggroPulseReset;
 	TSet<TWeakObjectPtr<ADonutFlyerPawn>> AggroedDonuts;
-
+private:
+    FVector LaunchLocation;
 protected:
 	virtual void BeginPlay() override;
-
+    virtual void Tick(float DeltaTime) override;
+    
 public:
 	AZapEmProjectile();
 
