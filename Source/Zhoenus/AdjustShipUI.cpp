@@ -75,9 +75,7 @@ void UAdjustShipUI::ConfigureButton(UCommonButtonBase* Button) const
 	}
 
 	Button->SetIsFocusable(true);
-	Button->SetIsSelectable(true);
-	Button->SetIsInteractableWhenSelected(true);
-	Button->SetShouldSelectUponReceivingFocus(true);
+	Button->SetIsSelectable(false);
 }
 
 void UAdjustShipUI::ConfigureNavigation() const

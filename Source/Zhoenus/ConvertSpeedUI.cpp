@@ -89,9 +89,7 @@ void UConvertSpeedUI::ConfigureButton(UCommonButtonBase* Button) const
 	}
 
 	Button->SetIsFocusable(true);
-	Button->SetIsSelectable(true);
-	Button->SetIsInteractableWhenSelected(true);
-	Button->SetShouldSelectUponReceivingFocus(true);
+	Button->SetIsSelectable(false);
 }
 
 void UConvertSpeedUI::ConfigureNavigation() const
