@@ -150,7 +150,13 @@ void AZapEmProjectile::PlayAggroFeedback(const FVector& ContactLocation)
 {
 	if (AggroFeedbackSound != nullptr)
 	{
-		UGameplayStatics::PlaySoundAtLocation(this, AggroFeedbackSound, ContactLocation, AggroFeedbackSoundVolume);
+        //This is an interesting opportunity, actually the intent is to play the sound to ourselves so we know we triggered the flyer
+        //as well we would like haptic feedback.. .. in a space game with no atmosphere sound won't travel.. however if we play the sound
+        //at a location and another flyer overhears it, it could be used to draw their attention... design choices, there are so
+        //many opportunities, with multiple development PODs we could iterate and explore each of these to gather real-world feedback
+        
+        //for now I will pay the sound as audible feedback TODO: haptic feedback
+		UGameplayStatics::PlaySound2D(this, AggroFeedbackSound, AggroFeedbackSoundVolume);
 	}
 
 	if (AggroFeedbackFlare != nullptr && GetWorld() != nullptr)
