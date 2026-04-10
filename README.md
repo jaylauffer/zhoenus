@@ -8,6 +8,9 @@ UE5 flying-action game project centered on the `SaveThemAll` loop: fly the ship,
 - This repository keeps its committed `.lfsconfig` so internal contributors resolve large assets against the approved local endpoint.
 - Public clones should expect code and metadata first; asset hydration still depends on local internal access.
 
+## About EAB Integration and future directions
+- [Philosophical/Technical GPT Chat about EAB integration, with instructions](https://chatgpt.com/share/69d93b17-85c0-8324-ac81-1ddef375123a)
+
 ## Current Reference Notes
 
 - [Input and gamepad analysis](Docs/gamepad-controls-analysis.md)
