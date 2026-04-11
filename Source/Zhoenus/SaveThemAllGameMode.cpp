@@ -172,16 +172,22 @@ int32 ASaveThemAllGameMode::SelectSongIndex(const int64 TotalAttempts) const
 		return INDEX_NONE;
 	}
 
-	
-    //Note - there must be at least 3 songs in the list, we're not going to check the list size
-	if (TotalAttempts <= 2 && !FirstThreeSongPaths.IsEmpty())
+	const int32 PlaylistCount = RuntimeSongPlaylist.Num();
+	const int32 PinnedSongCount = FMath::Min(FirstThreeSongPaths.Num(), PlaylistCount);
+
+	// The first few runs are intentionally fixed to the curated front of the playlist.
+	if (PinnedSongCount > 0 && TotalAttempts < PinnedSongCount)
 	{
-        UE_LOG(LogSaveThemAllGameMode, Log, TEXT("3-peat: Song selected: %d."), TotalAttempts);
-        return TotalAttempts;
+		const int32 FixedIndex = static_cast<int32>(TotalAttempts);
+		UE_LOG(LogSaveThemAllGameMode, Log, TEXT("Pinned early-run song index %d selected for attempt %lld."), FixedIndex, TotalAttempts);
+		return FixedIndex;
 	}
 
-    const int32 ChoiceCount = static_cast<int32>(TotalAttempts % RuntimeSongPlaylist.Num() - 1);
-	return FMath::RandRange(0, ChoiceCount - 1);
+	// After the pinned opening runs, widen the random pool by one playlist entry per attempt
+	// until the full runtime playlist becomes available.
+	const int32 UnlockedSongCount = static_cast<int32>(
+		FMath::Clamp<int64>(TotalAttempts + 1, 1, PlaylistCount));
+	return FMath::RandRange(0, UnlockedSongCount - 1);
 }
 
 int32 ASaveThemAllGameMode::SelectLegacySongWaveIndex(const int64 TotalAttempts) const
