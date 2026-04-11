@@ -35,15 +35,14 @@ Current knobs:
 - `bEnableRuntimeSongPlaylist=True`
 - `bScanSoundDirectory=True`
 - `SoundAssetDirectory=/Game/Sound`
-- `PreferredFirstSongPath=/Game/Sound/20220506-ode-to-ts-mono.20220506-ode-to-ts-mono`
 - `FallbackSongPath=/Game/Sound/LevelSong.LevelSong`
 - `+SongAssetPaths=...` for the curated front of the playlist
 
 Meaning:
 
-- `SongAssetPaths` defines the stable front of the playlist and therefore the
-  early-attempt bias
-- `PreferredFirstSongPath` preserves the "first run gets Ode to TS" behavior
+- `SongAssetPaths` defines the curated front of the runtime playlist
+- the first few runs are pinned to the curated opening songs before the random
+  pool gradually widens across the playlist
 - `bScanSoundDirectory=True` appends any newly imported `SoundWave` assets from
   `/Game/Sound` without requiring MetaSound graph edits
 - `FallbackSongPath` keeps the old `LevelSong` asset available if the runtime
