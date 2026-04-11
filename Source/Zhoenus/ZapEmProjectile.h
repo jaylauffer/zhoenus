@@ -49,10 +49,11 @@ class AZapEmProjectile : public AActor
 	float ProjectileHitThreat{ 3.0f };
 	FVector BaseProjectileScale{ FVector::OneVector };
 	float AggroRadiusOverride{ 0.f };
+	float InitialAggroRadius{ 0.f };
 	FTimerHandle TimerHandle_AggroPulseReset;
 	TSet<TWeakObjectPtr<ADonutFlyerPawn>> AggroedDonuts;
 private:
-    FVector LaunchLocation;
+	    FVector LaunchLocation;
 protected:
 	virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
