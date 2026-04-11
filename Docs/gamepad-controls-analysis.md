@@ -193,22 +193,21 @@ UI evidence from 2026-03-31:
 
 Implication:
 
-- Controller navigation could land inconsistently or fail to present a selected button state even when a widget technically accepted focus.
+- Controller navigation could land inconsistently or fail to present a clear focused-button state even when a widget technically accepted focus.
 - `ConvertSpeed` also needed a native focus target so gamepad focus would not resolve to the hidden legacy buttons.
 
 Current fix:
 
-- `UAdjustShipUI`, `UConvertSpeedUI`, and `UPowerUpScreenUI` now mark their live buttons as:
-  - selectable
-  - focusable
-  - interactable while selected
-  - selected on focus
+- `UAdjustShipUI`, `UConvertSpeedUI`, and `UPowerUpScreenUI` now treat their live buttons as focus-driven controls rather than selectable/toggle-style controls.
+- The important behavior is that the actively focused button reads clearly during controller navigation; CommonUI "selectable" state was not the desired semantic for these menus.
+- The native wrappers therefore keep the live buttons focusable and route focus explicitly, without relying on selectable/selected-on-focus behavior.
 - Those native classes also provide explicit focus targets.
 - `ConvertSpeed` and `PowerUpScreenWidget` now apply explicit directional navigation rules for the visible button layouts.
 - `PowerUpScreenWidget` is now reparented to native `UPowerUpScreenUI` so the focus rules are enforced in code instead of depending only on blueprint defaults.
 - The widget blueprints for `PowerUpScreenWidget`, `AdjustShip`, and `ConvertSpeed` no longer keep their own `BP_GetDesiredFocusTarget` override, so CommonUI falls back to the native focus logic instead of stale blueprint focus data.
 - `PowerUpRoot` is now also reparented to native `UPowerUpRootUI`, marked focusable, set to `auto_activate=true`, and stripped of its old `BP_GetDesiredFocusTarget` override. That wrapper hands focus from the map-level root widget into the active widget on the CommonUI stack instead of leaving focus parked on the root.
 - `ZhoenusButton` now has `ZhoenusRepeatButtonStyle` assigned again, and that style asset now defines explicit rounded-box normal and selected brushes. Before that patch the style existed but its brushes were effectively blank, which made focused buttons look unchanged.
+- The current expectation is gamepad-first validation of focused-button behavior. Keyboard navigation still needs a later pass before this area should be treated as fully validated across both input paths.
 - `PowerUpStatWidget` is now also reparented to native `UPowerUpStatWidgetUI`, and its old event graph plus `InitStatValue` helper graph were stripped from the asset. The row widget is now a layout shell with native behavior only.
 - `AdjustShipUI` now seeds the visible stat rows from the loaded `SaveThemAllGameInstance` during `NativeConstruct`, so the menu no longer depends on having played `Level-1` in the same session before showing real stat values.
 - `AdjustShipUI` now also updates `CommonNumericTextBlock_PointsRemaining` in native code from the live preview stats. That points-remaining display is no longer just an opaque blueprint subtraction path.
