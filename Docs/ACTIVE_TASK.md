@@ -25,9 +25,9 @@ Refine **reticle feedback** and **button highlight usability** to ensure the 6DO
      - "Again" and "Back" buttons on `PowerUp.umap` must drive **expected state transitions**.  
 
 3. **Song-Ending Condition**  
-   - **Objective**: Validate that gameplay sessions **end when the song finishes** (not when all DonutFlyers are saved).  
+   - **Objective**: Validate that gameplay sessions **end when the song finishes** and then advance to `PowerUp.umap`, regardless of how many DonutFlyers were saved.  
    - **Validation**:  
-     - Confirm transitions to `Startup.umap` after song ends.  
+     - Confirm transitions to `PowerUp.umap` after song ends.  
 
 ---
 
@@ -41,7 +41,7 @@ Refine **reticle feedback** and **button highlight usability** to ensure the 6DO
 - **State Transitions**:  
   - "Again" button must transition to `Level-1.umap` for a new session.  
   - "Back" button must return to `Startup.umap`.  
-  - Song-ending condition must trigger automatic transition to `Startup.umap`.  
+  - Song-ending condition must trigger automatic transition to `PowerUp.umap`.  
 
 ---
 
@@ -65,9 +65,9 @@ Refine **reticle feedback** and **button highlight usability** to ensure the 6DO
 ### **Notes**  
 - **No UI distractions during flight**: Button highlights and power-up screens are **inactive in Level-1.umap**.  
 - **Song-ending condition**: Sessions end **automatically when the song finishes**, not when all DonutFlyers are saved.  
+- **Full-save behavior**: Saving every DonutFlyer should eventually generate an EAB achievement claim, but it should not short-circuit the run or replace the song-ended transition to `PowerUp.umap`.  
 - **Map Transitions**:  
-  - `Level-1.umap` → `Startup.umap` (song ends)  
-  - `Level-1.umap` → `PowerUp.umap` (DonutFlyers saved)  
+  - `Level-1.umap` → `PowerUp.umap` (song ends; end of gameplay session)  
   - `PowerUp.umap` → `Level-1.umap` ("Again" button)  
   - `PowerUp.umap` → `Startup.umap` ("Back" button)  
 

@@ -15,14 +15,14 @@ AdjustShipUI label restoration via blueprint path (no gameplay changes)
 ### State Transition Rules
 | From Map       | To Map         | Trigger                          | Notes                                  |
 |----------------|----------------|----------------------------------|----------------------------------------|
-| `Level-1.umap` | `Startup.umap` | Song finishes playing            | Session ends; player returns to menu   |
-| `Level-1.umap` | `PowerUp.umap` | DonutFlyers all saved            | Transition to post-flight UI           |
+| `Level-1.umap` | `PowerUp.umap` | Song finishes playing            | Session ends; player enters post-flight UI |
 | `PowerUp.umap` | `Level-1.umap` | "Again" button clicked          | Start new gameplay session             |
 | `PowerUp.umap` | `Startup.umap` | "Back" button clicked           | Return to main menu                    |
 | `Startup.umap` | `Level-1.umap` | "Play" button clicked           | Launch core flight loop                |
 | `Startup.umap` | (Exit)         | "Enough" button clicked         | Close app, no further UI interaction   |
 
 ### Validation Criteria
-- Confirm song-ending condition triggers transition to Startup.umap
+- Confirm song-ending condition triggers transition to PowerUp.umap
 - Ensure "Again" and "Back" buttons drive correct state transitions
 - Verify no UI elements interfere with flight mechanics in Level-1.umap
+- Saving all DonutFlyers should eventually produce an EAB achievement claim, but it should not replace the song-ended transition to PowerUp.umap
