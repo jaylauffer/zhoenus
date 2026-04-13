@@ -4,6 +4,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/World.h"   
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "SaveThemAllGameInstance.h"
 #include "UObject/ConstructorHelpers.h"
