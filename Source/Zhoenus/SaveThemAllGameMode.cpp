@@ -40,7 +40,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogSaveThemAllGameMode, Log, All);
 ASaveThemAllGameMode::ASaveThemAllGameMode()
 {
 	{
-		static ConstructorHelpers::FObjectFinder<USoundBase> Song(TEXT("/Game/Sound/LevelSong.LevelSong"));
+		static ConstructorHelpers::FObjectFinder<USoundBase> Song(TEXT("/Game/Sound/Game/LevelSong.LevelSong"));
 		if (Song.Object != nullptr)
 		{
 			LegacyFallbackSong = Song.Object;

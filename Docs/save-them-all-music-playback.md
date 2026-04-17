@@ -4,6 +4,10 @@
 
 `SaveThemAll` uses one song per run.
 
+Companion note:
+
+- [Zhoenus Music Source Playlists](music-source-playlists.md)
+
 The song is not just background flavor. When the selected track ends,
 `ASaveThemAllGameMode::OnSongFinished()` advances the run to the `PowerUp` map.
 
@@ -14,7 +18,7 @@ through the `LevelSong` MetaSound asset.
 
 - `ASaveThemAllGameMode::BeginPlay()` calls `BuildSongPlaylist()`
 - the game mode resolves a runtime playlist from configured song asset paths
-- if enabled, it also scans `/Game/Sound` for additional `SoundWave` assets
+- if enabled, it also scans `/Game/Sound/Game` for additional `SoundWave` assets
 - it chooses one song for the run
 - `UGameplayStatics::CreateSound2D()` plays that song
 - when the song finishes, `OnSongFinished()` opens `PowerUp`
@@ -34,8 +38,8 @@ Current knobs:
 
 - `bEnableRuntimeSongPlaylist=True`
 - `bScanSoundDirectory=True`
-- `SoundAssetDirectory=/Game/Sound`
-- `FallbackSongPath=/Game/Sound/LevelSong.LevelSong`
+- `SoundAssetDirectory=/Game/Sound/Game`
+- `FallbackSongPath=/Game/Sound/Game/LevelSong.LevelSong`
 - `+SongAssetPaths=...` for the curated front of the playlist
 
 Meaning:
@@ -44,7 +48,7 @@ Meaning:
 - the first few runs are pinned to the curated opening songs before the random
   pool gradually widens across the playlist
 - `bScanSoundDirectory=True` appends any newly imported `SoundWave` assets from
-  `/Game/Sound` without requiring MetaSound graph edits
+  `/Game/Sound/Game` without requiring MetaSound graph edits
 - `FallbackSongPath` keeps the old `LevelSong` asset available if the runtime
   playlist resolves to nothing
 - if that fallback `LevelSong` MetaSound is used, the game mode still drives its
@@ -55,11 +59,13 @@ Meaning:
 - Keep this tied to the `SaveThemAll` loop: one track per run, then advance.
 - Prefer config and folder management over editing a MetaSound graph just to add
   or reorder songs.
-- Treat `/Game/Sound` as the music library for this mode unless the project
-  later creates a dedicated subfolder.
+- Treat `/Game/Sound/Game` as the gameplay music library for this mode.
+- Treat this as the **gameplay** playlist path, not the menu/lobby playlist.
+- Raw source files placed under `Music/Game` are intended to feed this gameplay
+  playlist after they are imported into `/Game/Sound/Game`.
 - If curated order matters, change `SongAssetPaths` in config.
 - If automatic discovery matters more, leave scanning enabled and drop new songs
-  into `/Game/Sound`.
+  into `/Game/Sound/Game`.
 
 ## Non-Goals
 

@@ -34,8 +34,8 @@ The current packaged-song path remains the foundation.
 
 Today the game can:
 
-- build a runtime playlist from configured `/Game/Sound` asset paths
-- optionally scan `/Game/Sound` for additional `SoundWave` assets
+- build a runtime playlist from configured `/Game/Sound/Game` asset paths
+- optionally scan `/Game/Sound/Game` for additional `SoundWave` assets
 - play one song for the run
 - advance to `PowerUp` when that song ends
 
