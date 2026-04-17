@@ -14,7 +14,7 @@ The current runtime path is:
 - `ASpaceshipPawn::GetProjectileSpawnLocation()` returns the live muzzle origin
 - `ASpaceshipPawn::GetProjectileFireDirection()` returns the live forward shot direction
 - `ASpaceshipPawn::GetProjectileAimPoint()` line-traces on `ECC_Visibility` and returns either the hit point or the trace end
-- `AZhoenusPawn::UpdateAimProjector()` places the reticle at that live aim point, clamped by config distance and pulled back slightly by depth bias
+- `AZhoenusPawn::UpdateAimProjector()` places the reticle at that live aim point, clamps it by config distance, keeps a minimum forward standoff from the muzzle, and only then applies the depth-bias pullback
 - `AZhoenusPawn::CreateAimProjector()` configures a `UMaterialBillboardComponent` using `/Game/Textures/M_AimProjector`
 
 Relevant files:
@@ -35,6 +35,7 @@ Current values:
 - `AimProjectorMaterialPath=/Game/Textures/M_AimProjector.M_AimProjector`
 - `AimProjectorTraceDistance=5000.0`
 - `AimProjectorMaxVisibleDistance=3200.0`
+- `AimProjectorMinVisibleDistance=160.0`
 - `AimProjectorDepthBias=48.0`
 - `AimProjectorScale=252.0`
 - `AimProjectorAggroRadiusScale=0.5`
@@ -124,6 +125,7 @@ The reticle is correct when all of these are true:
 - it is visible in front of the ship during normal flight
 - it sits on the live shot path, not an arbitrary camera ray
 - it does not overlap the ship like a HUD sticker
+- it hides instead of collapsing back onto the muzzle when the trace is too close to satisfy the forward standoff
 - the ship can partially or fully occlude it
 - it remains legible without dominating the frame
 - it behaves consistently while flying and firing

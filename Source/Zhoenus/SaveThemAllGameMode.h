@@ -74,20 +74,20 @@ private:
 	bool bScanSoundDirectory = true;
 
 	UPROPERTY(EditAnywhere, Config, Category = "Music")
-	FString SoundAssetDirectory = TEXT("/Game/Sound");
+	FString SoundAssetDirectory = TEXT("/Game/Sound/Game");
 
 	UPROPERTY(EditAnywhere, Config, Category = "Music")
 	TArray<FString> SongAssetPaths;
 
 	UPROPERTY(EditAnywhere, Config, Category = "Music")
     TArray<FString> FirstThreeSongPaths = {
-        TEXT("/Game/Sound/Ode-to-TS-Part1.Ode-to-TS-Part1"),
-        TEXT("/Game/Sound/Ode-to-TS-Part2.Ode-to-TS-Part2"),
-        TEXT("/Game/Sound/Ode-to-TS-Part3.Ode-to-TS-Part3")
+        TEXT("/Game/Sound/Game/Ode-to-TS-Part1.Ode-to-TS-Part1"),
+        TEXT("/Game/Sound/Game/Ode-to-TS-Part2.Ode-to-TS-Part2"),
+        TEXT("/Game/Sound/Game/Ode-to-TS-Part3.Ode-to-TS-Part3")
     };
 
 	UPROPERTY(EditAnywhere, Config, Category = "Music")
-	FString FallbackSongPath = TEXT("/Game/Sound/LevelSong.LevelSong");
+	FString FallbackSongPath = TEXT("/Game/Sound/Game/LevelSong.LevelSong");
 
 	UPROPERTY(Transient)
 	TObjectPtr<ALevelVideoSurfaceManager> LevelVideoSurfaceManager;
