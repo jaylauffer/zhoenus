@@ -7,6 +7,7 @@
 Companion note:
 
 - [Zhoenus Music Source Playlists](music-source-playlists.md)
+- [Zhoenus Lobby Music Design](lobby-music-design.md)
 
 The song is not just background flavor. When the selected track ends,
 `ASaveThemAllGameMode::OnSongFinished()` advances the run to the `PowerUp` map.
@@ -27,6 +28,8 @@ Relevant source files:
 
 - `Source/Zhoenus/SaveThemAllGameMode.h`
 - `Source/Zhoenus/SaveThemAllGameMode.cpp`
+- `Source/Zhoenus/ZhoenusLobbyGameMode.h`
+- `Source/Zhoenus/ZhoenusLobbyGameMode.cpp`
 - `Config/DefaultGame.ini`
 
 ## Current Configuration
@@ -61,6 +64,7 @@ Meaning:
   or reorder songs.
 - Treat `/Game/Sound/Game` as the gameplay music library for this mode.
 - Treat this as the **gameplay** playlist path, not the menu/lobby playlist.
+- Treat lobby music as a separate system owned by `AZhoenusLobbyGameMode`.
 - Raw source files placed under `Music/Game` are intended to feed this gameplay
   playlist after they are imported into `/Game/Sound/Game`.
 - If curated order matters, change `SongAssetPaths` in config.

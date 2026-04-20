@@ -66,6 +66,9 @@ Current immediate target:
   - `PowerUp.umap`
 - widget-only menu states hosted inside `PowerUp.umap` should still be treated
   as lobby/menu context, not gameplay context
+- imported lobby assets now live under `/Game/Sound/Lobby`
+- the current curated runtime lobby asset is
+  `/Game/Sound/Lobby/LobbySong.LobbySong`
 
 ## Immediate content intent
 
@@ -75,8 +78,35 @@ The current `Music/Lobby` folder contains:
 
 Immediate behavior target:
 
-- this track should act as the background music for menu screens until the
-  lobby playlist grows beyond a single track
+- `LobbySong` should act as the background music for menu screens until the
+  lobby playlist grows beyond a single curated track
+
+## Lobby context rule
+
+Zhoenus does **not** currently have a separate dedicated "lobby gameplay mode"
+class.
+
+Today:
+
+- `GlobalDefaultGameMode` now points at `ZhoenusLobbyGameMode`
+- `Startup.umap` and `PowerUp.umap` resolve to lobby context through that lobby
+  game mode
+- `Level-1.umap` remains gameplay context
+
+`Level-*` gameplay maps are routed back to `SaveThemAllV1` with a map-prefix
+override, so lobby ownership stays separate from the gameplay run loop.
+
+## Current lobby playback target
+
+Until the lobby playlist grows into multiple curated tracks, the intended lobby
+behavior is:
+
+- use `/Game/Sound/Lobby/LobbySong.LobbySong`
+- play at approximately `42%` volume
+- when the song ends, wait a random interval between `16` and `42` seconds
+- then play it again
+- fade in on playback start
+- fade out when leaving lobby context
 
 ## Design rules
 
@@ -91,15 +121,15 @@ Immediate behavior target:
    - menu/lobby track source -> `Music/Lobby`
 6. Runtime code should resolve playlists from curated project state, not treat
    incoming folder contents as implicit authority with no documentation.
+7. Lobby behavior should be owned by `AZhoenusLobbyGameMode`, not by the save
+   game instance.
 
 ## Non-goals
 
 This note does not yet decide:
 
-- whether menu music is imported into `/Game/Sound/Lobby`, `/Game/Music/Lobby`, or
-  another Unreal content path
 - whether lobby playback lives in a game instance, startup map actor, UI
-  widget, or dedicated audio manager
+  widget, or dedicated audio manager in the final architecture
 - whether multiple lobby tracks should shuffle, rotate, or remain fixed
 
 Those are implementation decisions to make after the playlist intent is clear.
@@ -110,6 +140,7 @@ For current prototype work:
 
 - `Music/Game` feeds the gameplay playlist
 - `Music/Lobby` feeds the lobby playlist
-- `Tropical-Delight-Menus-BGM.wav` is the current intended lobby/menu track
+- `/Game/Sound/Lobby/LobbySong.LobbySong` is the current intended lobby/menu
+  runtime track
 - menu screens should use lobby music
 - `Level-1` should keep using the gameplay playlist model
