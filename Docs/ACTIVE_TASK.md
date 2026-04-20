@@ -25,8 +25,11 @@ existing 6DOF flight/save loop and song-ended transition behavior.
    - **Validation**:  
      - `Startup.umap` uses lobby music.  
      - `PowerUp.umap` uses lobby music.  
-     - Current lobby source track `Music/Lobby/Tropical-Delight-Menus-BGM.wav`
+     - Current lobby runtime track `/Game/Sound/Lobby/LobbySong.LobbySong`
        is the active menu target until more lobby tracks exist.  
+     - Playback starts at about `42%` volume with fade in.  
+     - After the song ends, replay waits a random `16`-`42` second silence
+       interval.  
 
 3. **Gameplay Song-Ending Condition**  
    - **Objective**: Preserve the rule that gameplay sessions **end when the gameplay song finishes** and then advance to `PowerUp.umap`, regardless of how many DonutFlyers were saved.  
@@ -49,6 +52,7 @@ existing 6DOF flight/save loop and song-ended transition behavior.
 
 ### **Required Reading**  
 - `Docs/music-source-playlists.md` (game vs lobby playlist intent)  
+- `Docs/lobby-music-design.md` (lobby context and playback behavior)  
 - `Docs/save-them-all-music-playback.md` (current gameplay playlist path)  
 - `Docs/gamepad-controls-analysis.md` (reticle behavior and UI feedback)  
 - `Docs/point-system-and-convert.md` (stat label mappings and UI alignment)  
@@ -68,6 +72,8 @@ existing 6DOF flight/save loop and song-ended transition behavior.
 ### **Notes**  
 - **Menu vs gameplay music**: Menu-facing maps should consume lobby music; flight
   remains on the gameplay playlist path.  
+- **Lobby mode**: `Startup` and `PowerUp` should use `AZhoenusLobbyGameMode`;
+  `Level-*` maps should remain on `SaveThemAllV1`.  
 - **Song-ending condition**: Gameplay sessions end **automatically when the gameplay song finishes**, not when all DonutFlyers are saved.  
 - **Full-save behavior**: Saving every DonutFlyer should eventually generate an EAB achievement claim, but it should not short-circuit the run or replace the song-ended transition to `PowerUp.umap`.  
 - **Map Transitions**:  
