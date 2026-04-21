@@ -2,6 +2,7 @@
 #include "Zhoenus.h"
 #include "SaveThemAllGameInstance.h"
 #include "ZhoenusPawn.h"
+#include "ZhoenusThumbstick.h"
 #include "ZhoenusTouchUI.h"
 #include "Components/Button.h"
 #include "Misc/OutputDevice.h"
@@ -32,6 +33,17 @@ AZhoenusPlayerController::AZhoenusPlayerController()
 AZhoenusPlayerController::~AZhoenusPlayerController()
 {
 
+}
+
+TSharedPtr<SVirtualJoystick> AZhoenusPlayerController::CreateVirtualJoystick()
+{
+	TSharedRef<ZhoenusThumbstick> Thumbstick = SNew(ZhoenusThumbstick)
+		.OnStickPressureChanged(
+			FOnStickPressureChanged::CreateUObject(
+				this,
+				&AZhoenusPlayerController::HandleStickPressureChanged));
+	PressureThumbstick = Thumbstick;
+	return StaticCastSharedRef<SVirtualJoystick>(Thumbstick);
 }
 
 #if !UE_BUILD_SHIPPING && !UE_BUILD_TEST
@@ -110,10 +122,18 @@ void AZhoenusPlayerController::BeginPlay()
 		{
 			touchUI->AddToViewport();
 
-			touchUI->ButtonFire->OnPressed.AddDynamic(this, &AZhoenusPlayerController::TouchFirePressed);
-			touchUI->ButtonFire->OnReleased.AddDynamic(this, &AZhoenusPlayerController::TouchFireReleased);
-			touchUI->ButtonStabilize->OnPressed.AddDynamic(this, &AZhoenusPlayerController::TouchAutoCorrectPressed);
-			touchUI->ButtonStabilize->OnReleased.AddDynamic(this, &AZhoenusPlayerController::TouchAutoCorrectReleased);
+			if (touchUI->ButtonFire)
+			{
+				touchUI->ButtonFire->OnPressed.AddDynamic(this, &AZhoenusPlayerController::TouchFirePressed);
+				touchUI->ButtonFire->OnReleased.AddDynamic(this, &AZhoenusPlayerController::TouchFireReleased);
+			}
+			if (touchUI->ButtonStabilize)
+			{
+				touchUI->ButtonStabilize->OnPressed.AddDynamic(this, &AZhoenusPlayerController::TouchAutoCorrectPressed);
+				touchUI->ButtonStabilize->OnReleased.AddDynamic(this, &AZhoenusPlayerController::TouchAutoCorrectReleased);
+			}
+			UpdateTouchToggleVisuals();
+			RefreshTouchPressureActions();
 		}
 	}
 }
@@ -133,6 +153,76 @@ void AZhoenusPlayerController::OnUnPossess()
 {
 	Super::OnUnPossess();
 	ScreenDebug("Unpossessed");
+}
+
+void AZhoenusPlayerController::HandleStickPressureChanged(int32 ControlIndex, float Pressure, bool bIsActive)
+{
+	UE_LOG(
+		LogZhoenus,
+		Verbose,
+		TEXT("Touch stick pressure control=%d pressure=%.3f active=%s"),
+		ControlIndex,
+		Pressure,
+		bIsActive ? TEXT("true") : TEXT("false"));
+	RefreshTouchPressureActions();
+}
+
+float AZhoenusPlayerController::NormalizeTouchPressure(
+	const float RawPressure,
+	const float Deadzone,
+	const float Scale) const
+{
+	const float ClampedPressure = FMath::Clamp(RawPressure, 0.0f, 1.0f);
+	const float ClampedDeadzone = FMath::Clamp(Deadzone, 0.0f, 0.95f);
+	if (ClampedPressure <= ClampedDeadzone)
+	{
+		return 0.0f;
+	}
+
+	const float NormalizedPressure = (ClampedPressure - ClampedDeadzone) / (1.0f - ClampedDeadzone);
+	return FMath::Clamp(NormalizedPressure * FMath::Max(0.0f, Scale), 0.0f, 1.0f);
+}
+
+void AZhoenusPlayerController::RefreshTouchPressureActions()
+{
+	const float StabilizePressure =
+		bTouchStabilizePressureModeEnabled && PressureThumbstick.IsValid()
+			? NormalizeTouchPressure(
+				PressureThumbstick->GetControlPressure(StabilizePressureControlIndex),
+				StabilizePressureDeadzone,
+				StabilizePressureScale)
+			: 0.0f;
+
+	const float FirePressure =
+		bTouchFirePressureModeEnabled && PressureThumbstick.IsValid()
+			? NormalizeTouchPressure(
+				PressureThumbstick->GetControlPressure(FirePressureControlIndex),
+				FirePressureDeadzone,
+				FirePressureScale)
+			: 0.0f;
+
+	DisengageAutoCorrect(StabilizePressure);
+	FireWeapon(FirePressure);
+}
+
+void AZhoenusPlayerController::UpdateTouchToggleVisuals() const
+{
+	if (!touchUI)
+	{
+		return;
+	}
+
+	if (touchUI->ButtonFire)
+	{
+		touchUI->ButtonFire->SetBackgroundColor(
+			bTouchFirePressureModeEnabled ? TouchFireToggleActiveColor : TouchToggleInactiveColor);
+	}
+
+	if (touchUI->ButtonStabilize)
+	{
+		touchUI->ButtonStabilize->SetBackgroundColor(
+			bTouchStabilizePressureModeEnabled ? TouchStabilizeToggleActiveColor : TouchToggleInactiveColor);
+	}
 }
 
 void AZhoenusPlayerController::DisengageAutoCorrect(float Val)
@@ -190,24 +280,34 @@ bool AZhoenusPlayerController::ServerFireWeapon_Validate(float)
 
 void AZhoenusPlayerController::TouchFirePressed() //_Implementation()
 {
-	UE_LOG(LogZhoenus, Display, TEXT("TouchFirePressed"));
-	FireWeapon(0.95f);
+	bTouchFirePressureModeEnabled = !bTouchFirePressureModeEnabled;
+	UE_LOG(
+		LogZhoenus,
+		Display,
+		TEXT("TouchFirePressed pressure_mode=%s"),
+		bTouchFirePressureModeEnabled ? TEXT("enabled") : TEXT("disabled"));
+	UpdateTouchToggleVisuals();
+	RefreshTouchPressureActions();
 }
 
 void AZhoenusPlayerController::TouchFireReleased() //_Implementation()
 {
-	UE_LOG(LogZhoenus, Display, TEXT("TouchFireReleased"));
-	FireWeapon(0.0f);
+	UE_LOG(LogZhoenus, Verbose, TEXT("TouchFireReleased"));
 }
 
 void AZhoenusPlayerController::TouchAutoCorrectPressed() //_Implementation()
 {
-	UE_LOG(LogZhoenus, Display, TEXT("TouchAutoCorrectPressed"));
-	DisengageAutoCorrect(1.0f);
+	bTouchStabilizePressureModeEnabled = !bTouchStabilizePressureModeEnabled;
+	UE_LOG(
+		LogZhoenus,
+		Display,
+		TEXT("TouchAutoCorrectPressed pressure_mode=%s"),
+		bTouchStabilizePressureModeEnabled ? TEXT("enabled") : TEXT("disabled"));
+	UpdateTouchToggleVisuals();
+	RefreshTouchPressureActions();
 }
 
 void AZhoenusPlayerController::TouchAutoCorrectReleased() //_Implementation()
 {
-	UE_LOG(LogZhoenus, Display, TEXT("TouchAutoCorrectReleased"));
-	DisengageAutoCorrect(0.0f);
+	UE_LOG(LogZhoenus, Verbose, TEXT("TouchAutoCorrectReleased"));
 }
