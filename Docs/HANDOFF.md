@@ -29,6 +29,8 @@ AdjustShipUI label restoration via blueprint path (no gameplay changes)
 - Current curated lobby runtime track:
   `/Game/Sound/Lobby/LobbySong.LobbySong`
 - Lobby music should be owned by `AZhoenusLobbyGameMode`
+- Lobby/menu maps should use `AZhoenusLobbyPlayerController`, not the gameplay
+  `AZhoenusPlayerController`, so flight touch UI never appears over menu screens
 - `Level-*` maps should route back to `SaveThemAllV1`
 
 ### State Transition Rules

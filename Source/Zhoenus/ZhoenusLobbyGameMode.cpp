@@ -3,16 +3,19 @@
 #include "ZhoenusLobbyGameMode.h"
 
 #include "Components/AudioComponent.h"
+#include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "Math/UnrealMathUtility.h"
 #include "Sound/SoundBase.h"
 #include "TimerManager.h"
 #include "UObject/SoftObjectPath.h"
+#include "ZhoenusLobbyPlayerController.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogZhoenusLobbyGameMode, Log, All);
 
 AZhoenusLobbyGameMode::AZhoenusLobbyGameMode()
 {
+	PlayerControllerClass = AZhoenusLobbyPlayerController::StaticClass();
 	DefaultPawnClass = nullptr;
 	HUDClass = nullptr;
 }
