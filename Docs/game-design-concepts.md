@@ -78,6 +78,59 @@ Why this is the right first mechanic:
 - it fits the existing fire-rate gate without requiring a total rewrite
 - it does not require physically accurate light simulation on day one
 
+## Economies And Feel
+
+`Zhoenus` already has more than one economy, even before a battery exists.
+
+Current distinct economies:
+
+- run-state ship performance:
+  - live speed gains earned immediately during the `SaveThemAll` run
+- durable progression currency:
+  - `points` earned at run end
+  - `points` reclaimed through `Convert`
+  - `points` spent in `PowerUp` / `AdjustShip`
+
+If `ZapEmProjectiles` are gated by `points`, those two economies collapse into one.
+
+That is technically easy, but it creates the wrong feel:
+
+- every trigger pull starts feeling like permanent upgrade loss
+- the player is asked to burn long-term progression just to use a moment-to-moment
+  control tool
+- it encourages hoarding shots instead of using them to steer and gather
+  `DonutFlyers`
+- it makes in-run firing strength depend on how rich the player was before the run,
+  instead of how well they are currently flying
+
+That is why `points` are the wrong first firing gate even though they are the
+cheapest implementation path.
+
+The desired firing economy should instead feel:
+
+- local to the current moment
+- readable on the HUD
+- recoverable after use
+- tactical rather than permanently punishing
+
+A rechargeable battery matches that feel much better than persistent `points`.
+
+Design rule:
+
+- durable progression currency should improve ship systems
+- durable progression currency should not usually be deleted by ordinary trigger
+  pulls
+
+Good uses for `points`:
+
+- buying better battery capacity
+- buying better recharge rate
+- buying better shot efficiency
+
+Bad early use for `points`:
+
+- paying directly for each `ZapEmProjectile`
+
 ## Larger Concept: Light Absorption
 
 The older, more ambitious vision should remain a real design concept:

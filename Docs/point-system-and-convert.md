@@ -39,6 +39,41 @@ This means the live speed bonuses earned during play and the point payout are se
 - speed bonuses are earned immediately per save
 - spendable points are paid at run end
 
+## Point Economy Meaning
+
+The current `points` model is a durable progression economy, not a
+moment-to-moment combat resource.
+
+In practice, `points` currently mean:
+
+- value earned from run success
+- value reclaimed through `Convert`
+- value carried into `PowerUp` and `AdjustShip`
+
+This matters for feel.
+
+If a normal `ZapEmProjectile` shot directly spends `points`, then each shot stops
+feeling like a tactical steering tool and starts feeling like burning future ship
+build value.
+
+That is the wrong read for the current project shape because:
+
+- `ZapEmProjectiles` are mainly used to influence and gather `DonutFlyers`
+- `points` are framed as reward/progression currency
+- progression currency is expected to be banked, planned, and spent deliberately
+  between runs or in upgrade screens
+
+So the recommended split is:
+
+- `points` remain the durable progression economy
+- any future shot gate should use a separate recoverable battery / energy economy
+
+`points` can still improve that future battery system indirectly by purchasing:
+
+- battery capacity
+- recharge rate
+- shot efficiency
+
 ## Restored Convert Behavior
 
 Relevant runtime files:
