@@ -11,6 +11,7 @@ AdjustShipUI label restoration via blueprint path (no gameplay changes)
 
 ### Current Focus
 - Reticle Refinement: Ensure visual feedback supports 6DOF flight and goal alignment
+- Menu Contrast Accessibility: Improve `PowerUp`, `Convert`, and `AdjustShip` contrast so the menus are easier to read for more players, but keep this below reticle work in priority
 - Button Highlight Usability: Improve visibility on Startup/AdjustShipUI screens without distracting from flight mechanics
 - Music Routing: Keep gameplay tracks and menu tracks separate so menu screens
   use lobby music while `Level-1` keeps the run-ending gameplay playlist model

@@ -23,6 +23,7 @@
 
 //todo cleanup dependency on SaveThemAllGameInstance..
 #include "SaveThemAllGameInstance.h"
+#include "ZhoenusBatteryComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogSpaceshipPawn, Log, All);
 
@@ -55,6 +56,8 @@ ASpaceshipPawn::ASpaceshipPawn(const FObjectInitializer &initializer)
 	PlaneMesh->BodyInstance.bSimulatePhysics = false;
 	PlaneMesh->BodyInstance.bEnableGravity = false;
 	RootComponent = PlaneMesh;
+
+	BatteryComponent = CreateDefaultSubobject<UZhoenusBatteryComponent>(TEXT("ZhoenusBattery0"));
 
 	// Cache our sound effect
 	static ConstructorHelpers::FObjectFinder<USoundBase> FireAudio(TEXT("/Game/Flying/Audio/TwinStickFire.TwinStickFire"));
@@ -96,6 +99,10 @@ void ASpaceshipPawn::BeginPlay()
 		PitchSpeed = stats.PitchAcceleration;
 		MaxSpeed = stats.MaxSpeed;
 		MinSpeed = stats.MinSpeed;
+		if (BatteryComponent != nullptr)
+		{
+			BatteryComponent->ConfigureFromShipStats(stats);
+		}
 	}
         //UE_LOG(LogSpaceshipPawn, Log, TEXT("Begin play - location: %s rotation: %s quat: %s"), *GetActorLocation().ToString(), *GetActorRotation().ToString(), *GetActorQuat().ToString());
 
@@ -418,6 +425,11 @@ void ASpaceshipPawn::FireShot()
 		// If we are pressing fire stick in a direction
 		if (CurrentRateOfFire > 0.0f)
 		{
+			if (BatteryComponent != nullptr && !BatteryComponent->CanConsumeShotEnergy())
+			{
+				return;
+			}
+
 			const FVector FireDirection = GetProjectileFireDirection();
 			const FRotator FireRotation = FireDirection.Rotation();
 			const FVector SpawnLocation = GetProjectileSpawnLocation();
@@ -431,14 +443,21 @@ void ASpaceshipPawn::FireShot()
 				{
 					zap->Attacker = this;
 					zap->SetAggroRadiusOverride(GetProjectileAggroRadius());
+					if (BatteryComponent != nullptr)
+					{
+						BatteryComponent->ConsumeShotEnergy();
+					}
 				}
 
-				bCanFire = false;
-				World->GetTimerManager().SetTimer(
-					TimerHandle_ShotTimerExpired,
-					this,
-					&ASpaceshipPawn::ShotTimerExpired,
-					FMath::GetRangeValue(FVector2D(2.3f, .2f), CurrentRateOfFire));
+				if (zap != nullptr)
+				{
+					bCanFire = false;
+					World->GetTimerManager().SetTimer(
+						TimerHandle_ShotTimerExpired,
+						this,
+						&ASpaceshipPawn::ShotTimerExpired,
+						FMath::GetRangeValue(FVector2D(2.3f, .2f), CurrentRateOfFire));
+				}
 			}
 			// try and play the sound if specified
 			//if (FireSound != nullptr)

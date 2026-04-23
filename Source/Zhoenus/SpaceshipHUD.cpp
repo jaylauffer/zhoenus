@@ -4,6 +4,7 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Blueprint/UserWidget.h"
 #include "SpaceshipPawn.h"
+#include "ZhoenusBatteryComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "GlobalRenderResources.h"
 
@@ -52,6 +53,7 @@ void ASpaceshipHUD::DrawHUD()
 	if (pawn)
 	{
 		DrawAimReticle(*pawn);
+		DrawBatteryIndicator(*pawn);
 		DrawPitchIndicator(*pawn);
 		DrawYawIndicator(*pawn);
 
@@ -119,6 +121,84 @@ void ASpaceshipHUD::DrawHUD()
 	}
 	
 
+}
+
+void ASpaceshipHUD::DrawBatteryIndicator(const ASpaceshipPawn& Pawn)
+{
+	if (!bDrawBatteryIndicator || Canvas == nullptr)
+	{
+		return;
+	}
+
+	const UZhoenusBatteryComponent* const Battery = Pawn.GetBatteryComponent();
+	if (Battery == nullptr || Battery->GetMaxEnergy() <= 0.f)
+	{
+		return;
+	}
+
+	const float EnergyFraction = Battery->GetEnergyFraction();
+	const float MeterWidth = BatteryIndicatorWidth;
+	const float MeterHeight = BatteryIndicatorHeight;
+	const float MeterLeft = Canvas->ClipX * BatteryIndicatorHorizontalAnchor - MeterWidth * 0.5f;
+	const float MeterTop = Canvas->ClipY * BatteryIndicatorVerticalAnchor - MeterHeight * 0.5f;
+	const float Padding = FMath::Clamp(BatteryIndicatorPadding, 0.f, MeterWidth * 0.4f);
+	const float InnerWidth = FMath::Max(1.f, MeterWidth - Padding * 2.f);
+	const float InnerHeight = FMath::Max(1.f, MeterHeight - Padding * 2.f);
+	const float FillHeight = InnerHeight * EnergyFraction;
+	const FLinearColor FillColor = EnergyFraction <= BatteryIndicatorLowThreshold ? BatteryIndicatorLowColor : BatteryIndicatorColor;
+
+	DrawRect(BatteryIndicatorBackgroundColor, MeterLeft, MeterTop, MeterWidth, MeterHeight);
+	if (FillHeight > 0.f)
+	{
+		DrawRect(
+			FillColor,
+			MeterLeft + Padding,
+			MeterTop + Padding + (InnerHeight - FillHeight),
+			InnerWidth,
+			FillHeight);
+	}
+
+	FLinearColor BorderColor = BatteryIndicatorTextColor;
+	BorderColor.A *= 0.65f;
+	DrawLine(MeterLeft, MeterTop, MeterLeft + MeterWidth, MeterTop, BorderColor, 1.5f);
+	DrawLine(MeterLeft + MeterWidth, MeterTop, MeterLeft + MeterWidth, MeterTop + MeterHeight, BorderColor, 1.5f);
+	DrawLine(MeterLeft + MeterWidth, MeterTop + MeterHeight, MeterLeft, MeterTop + MeterHeight, BorderColor, 1.5f);
+	DrawLine(MeterLeft, MeterTop + MeterHeight, MeterLeft, MeterTop, BorderColor, 1.5f);
+
+	const float TerminalWidth = MeterWidth * 0.52f;
+	const float TerminalHeight = 6.f;
+	DrawRect(
+		BorderColor,
+		MeterLeft + (MeterWidth - TerminalWidth) * 0.5f,
+		MeterTop - TerminalHeight - 3.f,
+		TerminalWidth,
+		TerminalHeight);
+
+	const FString Label = TEXT("BAT");
+	float LabelWidth = 0.f;
+	float LabelHeight = 0.f;
+	GetTextSize(Label, LabelWidth, LabelHeight, nullptr, BatteryIndicatorTextScale);
+	DrawText(
+		Label,
+		BatteryIndicatorTextColor,
+		MeterLeft + (MeterWidth - LabelWidth) * 0.5f,
+		MeterTop - LabelHeight - 14.f,
+		nullptr,
+		BatteryIndicatorTextScale,
+		false);
+
+	const FString PercentText = FString::Printf(TEXT("%d%%"), FMath::RoundToInt(EnergyFraction * 100.f));
+	float PercentWidth = 0.f;
+	float PercentHeight = 0.f;
+	GetTextSize(PercentText, PercentWidth, PercentHeight, nullptr, BatteryIndicatorTextScale);
+	DrawText(
+		PercentText,
+		BatteryIndicatorTextColor,
+		MeterLeft + (MeterWidth - PercentWidth) * 0.5f,
+		MeterTop + MeterHeight + 5.f,
+		nullptr,
+		BatteryIndicatorTextScale,
+		false);
 }
 
 void ASpaceshipHUD::DrawAimReticle(const ASpaceshipPawn& Pawn)

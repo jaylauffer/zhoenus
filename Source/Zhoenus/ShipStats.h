@@ -31,6 +31,15 @@ struct FShipStats
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Acceleration")
 	float RollAcceleration = 100.f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Battery")
+	float MaxBatteryEnergy = 100.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Battery")
+	float BatteryRechargeRate = 18.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Battery")
+	float ZapShotEnergyCost = 14.f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Donut")
 	// Intentionally lives on the ship: this radius is part of player-facing ship customization,
 	// not a global Donut AI tune. Players can change how strongly their own shots "pull" donuts.

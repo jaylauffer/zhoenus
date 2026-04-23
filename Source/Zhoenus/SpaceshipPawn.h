@@ -113,6 +113,9 @@ protected:
         UPROPERTY(Category = Mesh, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
         class UStaticMeshComponent* PlaneMesh;
 
+	UPROPERTY(Category = Systems, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	class UZhoenusBatteryComponent* BatteryComponent;
+
         // Begin APawn overrides
         virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override; // Allows binding actions/axes to functions
         // End APawn overrides
@@ -194,6 +197,7 @@ public:
 	FVector GetProjectileFireDirection() const;
 	FVector GetProjectileAimPoint(float TraceDistance) const;
 	virtual float GetProjectileAggroRadius() const;
+	class UZhoenusBatteryComponent* GetBatteryComponent() const { return BatteryComponent; }
 
 	/** Returns PlaneMesh subobject **/
 	FORCEINLINE class UStaticMeshComponent* GetPlaneMesh() const { return PlaneMesh; }

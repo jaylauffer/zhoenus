@@ -19,6 +19,7 @@ public:
 private:
 	void DrawAimReticle(const class ASpaceshipPawn& Pawn);
 	void DrawAimTriangle(const FVector2D& ScreenLocation);
+	void DrawBatteryIndicator(const class ASpaceshipPawn& Pawn);
 	void DrawPitchIndicator(const class ASpaceshipPawn& Pawn);
 	void DrawPitchTriangle(const FVector2D& BaseCenter, float Width, float Height, const FLinearColor& Color, bool bPointDown);
 	void DrawYawIndicator(const class ASpaceshipPawn& Pawn);
@@ -47,6 +48,42 @@ private:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Reticle")
 	FLinearColor AimReticleColor = FLinearColor(0.68f, 1.f, 0.2f, 0.58f);
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery")
+	bool bDrawBatteryIndicator = true;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float BatteryIndicatorHorizontalAnchor = 0.91f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float BatteryIndicatorVerticalAnchor = 0.72f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "8.0"))
+	float BatteryIndicatorWidth = 18.f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "24.0"))
+	float BatteryIndicatorHeight = 136.f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "0.0"))
+	float BatteryIndicatorPadding = 3.f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float BatteryIndicatorLowThreshold = 0.2f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery")
+	FLinearColor BatteryIndicatorColor = FLinearColor(0.14f, 0.84f, 1.f, 0.85f);
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery")
+	FLinearColor BatteryIndicatorLowColor = FLinearColor(1.f, 0.38f, 0.1f, 0.92f);
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery")
+	FLinearColor BatteryIndicatorBackgroundColor = FLinearColor(0.04f, 0.08f, 0.1f, 0.28f);
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery")
+	FLinearColor BatteryIndicatorTextColor = FLinearColor(0.92f, 0.96f, 1.f, 0.9f);
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "0.25"))
+	float BatteryIndicatorTextScale = 0.9f;
 
 	UPROPERTY(Config, EditAnywhere, Category = "Pitch")
 	bool bDrawPitchIndicator = true;
