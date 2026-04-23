@@ -25,27 +25,33 @@ into a generic shooter or a constant resource-starvation sim.
 
 ## Current Runtime Truth
 
-Today `ZapEmProjectiles` are effectively infinite.
+Today the live gameplay path has a first battery pass for `ZapEmProjectiles`.
 
 Current implementation facts:
 
-- `ASpaceshipPawn::FireShot()` only checks:
+- `ASpaceshipPawn` owns a native `UZhoenusBatteryComponent`
+- `ASpaceshipPawn::FireShot()` checks:
   - `bCanFire`
   - `CurrentRateOfFire > 0`
-- firing cadence is controlled by a timer, not a resource pool
+  - available battery energy for one shot
+- firing cadence is still controlled by a timer
+- a successful shot consumes battery energy
+- the battery recharges over time
+- the Canvas HUD now displays battery status
 - `AZapEmProjectile` is primarily a flyer-aggro tool:
   - it applies near-miss and hit threat to `DonutFlyers`
   - its effective aggro envelope is intentionally aligned with the visible reticle
-- there is no current battery, light-harvest, or per-system energy budget in the
-  live save/game-instance model
+- there is still no light-harvest simulation
+- no other ship systems currently consume battery energy
 
 So the current mechanic is:
 
 - hold fire
-- spawn shots at the allowed cadence
+- spawn shots at the allowed cadence while battery charge lasts
+- wait for passive recharge when the battery runs low
 - use those shots to influence follower behavior
 
-That is the baseline reality, not the long-term concept.
+That is now the live phase-1 reality, not the full long-term concept.
 
 ## ZapEmProjectile Design Direction
 
@@ -78,9 +84,53 @@ Why this is the right first mechanic:
 - it fits the existing fire-rate gate without requiring a total rewrite
 - it does not require physically accurate light simulation on day one
 
+## Projectile Radius And Battery
+
+The expanding projectile radius should currently be read as shot effectiveness,
+not as a second energy drain.
+
+Current live relationship:
+
+- battery / energy gates whether a shot can be fired at all
+- once fired, the projectile's aggro radius expands over travel distance
+- that expanding radius increases the shot's useful influence on nearby
+  `DonutFlyers`
+
+So the battery answers:
+
+- how many shots the player can afford right now
+- how quickly they recover from using those shots
+
+The expanding aggro radius answers:
+
+- how much space a single paid-for shot can influence
+- how forgiving / expressive that shot feels as a control tool
+
+Those are related in value, but not currently linked as separate costs.
+
+This is the preferred phase-1 relationship:
+
+- energy controls shot availability
+- radius growth controls shot effectiveness
+
+That keeps the system readable. A shot costs energy once, then delivers its
+full designed gameplay effect.
+
+If the project later wants deeper coupling, the safer direction is:
+
+- upgrades that improve battery efficiency
+- upgrades that improve projectile influence
+- optional charged-shot behaviors
+
+The less safe direction for feel is:
+
+- charging extra battery continuously just because the aggro radius expands
+- shrinking ordinary projectile usefulness whenever the battery is merely low
+
 ## Economies And Feel
 
-`Zhoenus` already has more than one economy, even before a battery exists.
+`Zhoenus` already has more than one economy, and the battery now makes that
+split explicit in runtime.
 
 Current distinct economies:
 
@@ -154,6 +204,8 @@ The battery concept should be phased, not attempted all at once.
 
 ### Phase 1: Shot Cost Only
 
+This phase is now the live baseline.
+
 Add only:
 
 - `CurrentEnergy`
@@ -172,7 +224,6 @@ This phase answers the author-note problem directly:
 
 Add:
 
-- HUD battery readout
 - power-up upgrades for:
   - battery capacity
   - recharge rate

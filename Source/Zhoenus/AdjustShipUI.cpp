@@ -6,6 +6,17 @@
 #include "PowerUpStatWidgetUI.h"
 #include "SaveThemAllGameInstance.h"
 
+namespace
+{
+	constexpr TCHAR ForwardAccelerationRowName[] = TEXT("PowerUpText_ForwardAcceleration");
+	constexpr TCHAR ReverseAccelerationRowName[] = TEXT("PowerUpText_BackwardsAcceleration");
+	constexpr TCHAR PitchAccelerationRowName[] = TEXT("PowerUpText_PitchAcceleration");
+	constexpr TCHAR YawAccelerationRowName[] = TEXT("PowerUpText_YawAcceleration");
+	constexpr TCHAR RollAccelerationRowName[] = TEXT("PowerUpText_RollAcceleration");
+	constexpr TCHAR MaxBatteryEnergyRowName[] = TEXT("PowerUpText_MaxBatteryEnergy");
+	constexpr TCHAR BatteryRechargeRateRowName[] = TEXT("PowerUpText_BatteryRechargeRate");
+}
+
 UAdjustShipUI::UAdjustShipUI(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 }
@@ -22,15 +33,17 @@ void UAdjustShipUI::NativeConstruct()
 		}
 	};
 
-	ApplyStatRowLabel(TEXT("PowerUpText_ForwardAcceleration"), TEXT("Forward Acceleration"));
-	ApplyStatRowLabel(TEXT("PowerUpText_BackwardsAcceleration"), TEXT("Backwards Acceleration"));
+	ApplyStatRowLabel(ForwardAccelerationRowName, TEXT("Forward Acceleration"));
+	ApplyStatRowLabel(ReverseAccelerationRowName, TEXT("Backwards Acceleration"));
 	ApplyStatRowLabel(
-		TEXT("PowerUpText_PitchAcceleration"),
+		PitchAccelerationRowName,
 		TEXT("Pitch (Up/Down) Acceleration"));
 	ApplyStatRowLabel(
-		TEXT("PowerUpText_YawAcceleration"),
+		YawAccelerationRowName,
 		TEXT("Yaw (Turn Left/Right) Acceleration"));
-	ApplyStatRowLabel(TEXT("PowerUpText_RollAcceleration"), TEXT("Roll Acceleration"));
+	ApplyStatRowLabel(RollAccelerationRowName, TEXT("Roll Acceleration"));
+	ApplyStatRowLabel(MaxBatteryEnergyRowName, TEXT("Battery Capacity"));
+	ApplyStatRowLabel(BatteryRechargeRateRowName, TEXT("Battery Recharge Rate"));
 
 	SetIsFocusable(true);
 	ConfigureButton(ZhoenusSaveButton);
@@ -141,25 +154,33 @@ void UAdjustShipUI::LoadShipStats() const
 		return;
 	}
 
-	if (UPowerUpStatWidgetUI* ForwardRow = FindStatRow(TEXT("PowerUpText_ForwardAcceleration")))
+	if (UPowerUpStatWidgetUI* ForwardRow = FindStatRow(ForwardAccelerationRowName))
 	{
 		ForwardRow->SetDisplayedStatValue(GameInstance->shipStats.ForwardAcceleration);
 	}
-	if (UPowerUpStatWidgetUI* ReverseRow = FindStatRow(TEXT("PowerUpText_BackwardsAcceleration")))
+	if (UPowerUpStatWidgetUI* ReverseRow = FindStatRow(ReverseAccelerationRowName))
 	{
 		ReverseRow->SetDisplayedStatValue(GameInstance->shipStats.ReverseAcceleration);
 	}
-	if (UPowerUpStatWidgetUI* PitchRow = FindStatRow(TEXT("PowerUpText_PitchAcceleration")))
+	if (UPowerUpStatWidgetUI* PitchRow = FindStatRow(PitchAccelerationRowName))
 	{
 		PitchRow->SetDisplayedStatValue(GameInstance->shipStats.PitchAcceleration);
 	}
-	if (UPowerUpStatWidgetUI* YawRow = FindStatRow(TEXT("PowerUpText_YawAcceleration")))
+	if (UPowerUpStatWidgetUI* YawRow = FindStatRow(YawAccelerationRowName))
 	{
 		YawRow->SetDisplayedStatValue(GameInstance->shipStats.YawAcceleration);
 	}
-	if (UPowerUpStatWidgetUI* RollRow = FindStatRow(TEXT("PowerUpText_RollAcceleration")))
+	if (UPowerUpStatWidgetUI* RollRow = FindStatRow(RollAccelerationRowName))
 	{
 		RollRow->SetDisplayedStatValue(GameInstance->shipStats.RollAcceleration);
+	}
+	if (UPowerUpStatWidgetUI* BatteryCapacityRow = FindStatRow(MaxBatteryEnergyRowName))
+	{
+		BatteryCapacityRow->SetDisplayedStatValue(GameInstance->shipStats.MaxBatteryEnergy);
+	}
+	if (UPowerUpStatWidgetUI* BatteryRechargeRow = FindStatRow(BatteryRechargeRateRowName))
+	{
+		BatteryRechargeRow->SetDisplayedStatValue(GameInstance->shipStats.BatteryRechargeRate);
 	}
 }
 
@@ -168,25 +189,33 @@ FShipStats UAdjustShipUI::BuildPreviewStats() const
 	const USaveThemAllGameInstance* GameInstance = GetGameInstance<USaveThemAllGameInstance>();
 	FShipStats PreviewStats = GameInstance ? GameInstance->shipStats : FShipStats{};
 
-	if (const UPowerUpStatWidgetUI* ForwardRow = FindStatRow(TEXT("PowerUpText_ForwardAcceleration")))
+	if (const UPowerUpStatWidgetUI* ForwardRow = FindStatRow(ForwardAccelerationRowName))
 	{
 		PreviewStats.ForwardAcceleration = ForwardRow->GetDisplayedStatValue();
 	}
-	if (const UPowerUpStatWidgetUI* ReverseRow = FindStatRow(TEXT("PowerUpText_BackwardsAcceleration")))
+	if (const UPowerUpStatWidgetUI* ReverseRow = FindStatRow(ReverseAccelerationRowName))
 	{
 		PreviewStats.ReverseAcceleration = ReverseRow->GetDisplayedStatValue();
 	}
-	if (const UPowerUpStatWidgetUI* PitchRow = FindStatRow(TEXT("PowerUpText_PitchAcceleration")))
+	if (const UPowerUpStatWidgetUI* PitchRow = FindStatRow(PitchAccelerationRowName))
 	{
 		PreviewStats.PitchAcceleration = PitchRow->GetDisplayedStatValue();
 	}
-	if (const UPowerUpStatWidgetUI* YawRow = FindStatRow(TEXT("PowerUpText_YawAcceleration")))
+	if (const UPowerUpStatWidgetUI* YawRow = FindStatRow(YawAccelerationRowName))
 	{
 		PreviewStats.YawAcceleration = YawRow->GetDisplayedStatValue();
 	}
-	if (const UPowerUpStatWidgetUI* RollRow = FindStatRow(TEXT("PowerUpText_RollAcceleration")))
+	if (const UPowerUpStatWidgetUI* RollRow = FindStatRow(RollAccelerationRowName))
 	{
 		PreviewStats.RollAcceleration = RollRow->GetDisplayedStatValue();
+	}
+	if (const UPowerUpStatWidgetUI* BatteryCapacityRow = FindStatRow(MaxBatteryEnergyRowName))
+	{
+		PreviewStats.MaxBatteryEnergy = BatteryCapacityRow->GetDisplayedStatValue();
+	}
+	if (const UPowerUpStatWidgetUI* BatteryRechargeRow = FindStatRow(BatteryRechargeRateRowName))
+	{
+		PreviewStats.BatteryRechargeRate = BatteryRechargeRow->GetDisplayedStatValue();
 	}
 
 	return PreviewStats;
@@ -233,25 +262,33 @@ void UAdjustShipUI::HandleSaveClicked()
 TArray<UPowerUpStatWidgetUI*> UAdjustShipUI::GetStatRows() const
 {
 	TArray<UPowerUpStatWidgetUI*> StatRows;
-	StatRows.Reserve(5);
+	StatRows.Reserve(7);
 
-	if (UPowerUpStatWidgetUI* Row = FindStatRow(TEXT("PowerUpText_ForwardAcceleration")))
+	if (UPowerUpStatWidgetUI* Row = FindStatRow(ForwardAccelerationRowName))
 	{
 		StatRows.Add(Row);
 	}
-	if (UPowerUpStatWidgetUI* Row = FindStatRow(TEXT("PowerUpText_BackwardsAcceleration")))
+	if (UPowerUpStatWidgetUI* Row = FindStatRow(ReverseAccelerationRowName))
 	{
 		StatRows.Add(Row);
 	}
-	if (UPowerUpStatWidgetUI* Row = FindStatRow(TEXT("PowerUpText_PitchAcceleration")))
+	if (UPowerUpStatWidgetUI* Row = FindStatRow(PitchAccelerationRowName))
 	{
 		StatRows.Add(Row);
 	}
-	if (UPowerUpStatWidgetUI* Row = FindStatRow(TEXT("PowerUpText_YawAcceleration")))
+	if (UPowerUpStatWidgetUI* Row = FindStatRow(YawAccelerationRowName))
 	{
 		StatRows.Add(Row);
 	}
-	if (UPowerUpStatWidgetUI* Row = FindStatRow(TEXT("PowerUpText_RollAcceleration")))
+	if (UPowerUpStatWidgetUI* Row = FindStatRow(RollAccelerationRowName))
+	{
+		StatRows.Add(Row);
+	}
+	if (UPowerUpStatWidgetUI* Row = FindStatRow(MaxBatteryEnergyRowName))
+	{
+		StatRows.Add(Row);
+	}
+	if (UPowerUpStatWidgetUI* Row = FindStatRow(BatteryRechargeRateRowName))
 	{
 		StatRows.Add(Row);
 	}
@@ -291,7 +328,7 @@ void UAdjustShipUI::LinkVerticalNavigation(UPowerUpStatWidgetUI* UpperRow, UPowe
 
 UWidget* UAdjustShipUI::NativeGetDesiredFocusTarget() const
 {
-	if (UPowerUpStatWidgetUI* ForwardRow = FindStatRow(TEXT("PowerUpText_ForwardAcceleration")))
+	if (UPowerUpStatWidgetUI* ForwardRow = FindStatRow(ForwardAccelerationRowName))
 	{
 		return ForwardRow->GetDesiredFocusTarget();
 	}

@@ -18,6 +18,9 @@ namespace
 		ShipStats.RollAcceleration = USaveThemAllGameInstance::DefaultRollAcceleration;
 		ShipStats.MaxSpeed = USaveThemAllGameInstance::DefaultMaxSpeed;
 		ShipStats.MinSpeed = USaveThemAllGameInstance::DefaultMinSpeed;
+		ShipStats.MaxBatteryEnergy = USaveThemAllGameInstance::DefaultMaxBatteryEnergy;
+		ShipStats.BatteryRechargeRate = USaveThemAllGameInstance::DefaultBatteryRechargeRate;
+		ShipStats.ZapShotEnergyCost = USaveThemAllGameInstance::DefaultZapShotEnergyCost;
 	}
 
 	void RepairLegacyShipStats(FShipStats& ShipStats)
@@ -45,6 +48,18 @@ namespace
 		if (!FMath::IsFinite(ShipStats.RollAcceleration))
 		{
 			ShipStats.RollAcceleration = USaveThemAllGameInstance::DefaultRollAcceleration;
+		}
+		if (!FMath::IsFinite(ShipStats.MaxBatteryEnergy) || ShipStats.MaxBatteryEnergy <= 0.f)
+		{
+			ShipStats.MaxBatteryEnergy = USaveThemAllGameInstance::DefaultMaxBatteryEnergy;
+		}
+		if (!FMath::IsFinite(ShipStats.BatteryRechargeRate) || ShipStats.BatteryRechargeRate < 0.f)
+		{
+			ShipStats.BatteryRechargeRate = USaveThemAllGameInstance::DefaultBatteryRechargeRate;
+		}
+		if (!FMath::IsFinite(ShipStats.ZapShotEnergyCost) || ShipStats.ZapShotEnergyCost <= 0.f)
+		{
+			ShipStats.ZapShotEnergyCost = USaveThemAllGameInstance::DefaultZapShotEnergyCost;
 		}
 
 		// Older saves predate ReverseAcceleration. Those loads come through as zero,
@@ -153,7 +168,9 @@ float USaveThemAllGameInstance::GetShipAdjustmentAllocationCost(const FShipStats
 	const float PitchCost = GetPointCostForDelta(Stats.PitchAcceleration, DefaultPitchAcceleration, PitchAccelerationPointRatio);
 	const float YawCost = GetPointCostForDelta(Stats.YawAcceleration, DefaultYawAcceleration, YawAccelerationPointRatio);
 	const float RollCost = GetPointCostForDelta(Stats.RollAcceleration, DefaultRollAcceleration, RollAccelerationPointRatio);
-	return ForwardCost + ReverseCost + PitchCost + YawCost + RollCost;
+	const float BatteryCapacityCost = GetPointCostForDelta(Stats.MaxBatteryEnergy, DefaultMaxBatteryEnergy, MaxBatteryEnergyPointRatio);
+	const float BatteryRechargeCost = GetPointCostForDelta(Stats.BatteryRechargeRate, DefaultBatteryRechargeRate, BatteryRechargeRatePointRatio);
+	return ForwardCost + ReverseCost + PitchCost + YawCost + RollCost + BatteryCapacityCost + BatteryRechargeCost;
 }
 
 float USaveThemAllGameInstance::GetShipAdjustmentPointBudget() const

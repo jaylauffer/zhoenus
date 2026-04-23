@@ -22,12 +22,17 @@ public:
 	static constexpr float DefaultRollAcceleration = 100.f;
 	static constexpr float DefaultMaxSpeed = 3000.f;
 	static constexpr float DefaultMinSpeed = -1000.f;
+	static constexpr float DefaultMaxBatteryEnergy = 100.f;
+	static constexpr float DefaultBatteryRechargeRate = 18.f;
+	static constexpr float DefaultZapShotEnergyCost = 14.f;
 	static constexpr float SpeedConversionRatio = 1.f / 7.f;
 	static constexpr float ForwardAccelerationPointRatio = 0.32f;
 	static constexpr float ReverseAccelerationPointRatio = 0.18f;
 	static constexpr float PitchAccelerationPointRatio = 0.07f;
 	static constexpr float YawAccelerationPointRatio = 0.10f;
 	static constexpr float RollAccelerationPointRatio = 0.08f;
+	static constexpr float MaxBatteryEnergyPointRatio = 0.08f;
+	static constexpr float BatteryRechargeRatePointRatio = 0.35f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FShipStats shipStats;

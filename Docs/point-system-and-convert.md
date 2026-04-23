@@ -66,9 +66,9 @@ That is the wrong read for the current project shape because:
 So the recommended split is:
 
 - `points` remain the durable progression economy
-- any future shot gate should use a separate recoverable battery / energy economy
+- `ZapEmProjectiles` use a separate recoverable battery / energy economy in live runtime
 
-`points` can still improve that future battery system indirectly by purchasing:
+`points` can still improve that battery system indirectly by purchasing:
 
 - battery capacity
 - recharge rate
@@ -157,6 +157,8 @@ Persistent handling stats now include:
 - `PitchAcceleration`
 - `YawAcceleration`
 - `RollAcceleration`
+- `MaxBatteryEnergy`
+- `BatteryRechargeRate`
 
 `ASpaceshipPawn` now reads both `ForwardAcceleration` and `ReverseAcceleration` from saved ship stats in `BeginPlay`:
 
@@ -174,6 +176,7 @@ Current default thrust baselines:
 - seeds each stat row from `USaveThemAllGameInstance::shipStats` during `NativeConstruct`
 - seeds them again during `NativeOnActivated`, with no blueprint stat-init path left in the asset
 - saves the reverse row back into `shipStats.ReverseAcceleration`
+- can also seed optional battery-capacity and battery-recharge rows when the layout asset provides them
 - leaves `shipStats.MinSpeed` alone so the `Convert` screen remains the only place that adjusts speed caps
 - computes `PointsRemaining` from native code rather than relying on implicit widget math
 - uses `UPowerUpStatWidgetUI` as the source of truth for the visible stat-row value, so preview math reads the same numbers the player is actually changing
@@ -196,6 +199,8 @@ Current temporary per-unit ratios:
 - `PitchAcceleration`: `0.07`
 - `YawAcceleration`: `0.10`
 - `RollAcceleration`: `0.08`
+- `MaxBatteryEnergy`: `0.08`
+- `BatteryRechargeRate`: `0.35`
 
 This is symmetric on purpose for now.
 
@@ -219,10 +224,24 @@ Older save files predate `ReverseAcceleration`.
 
 Those saves deserialize that field as `0`, which is not a meaningful migrated gameplay value for the current handling model. `USaveThemAllGameInstance::LoadGame` now repairs that case by restoring the baseline reverse thrust value during load.
 
+The newer battery fields also have native default repair on load so older saves
+that predate the battery pass still normalize to the intended baseline ship.
+
 This separation matters because the two screens now map cleanly to different systems:
 
-- `AdjustShip`: handling and thrust characteristics
+- `AdjustShip`: handling, thrust, and battery characteristics
 - `Convert`: reclaiming temporary forward/reverse speed limit gains into points
+
+### Current layout dependency
+
+The native `AdjustShip` code now supports two optional battery rows:
+
+- `PowerUpText_MaxBatteryEnergy`
+- `PowerUpText_BatteryRechargeRate`
+
+The current `AdjustShip.uasset` layout still only contains the original five
+handling rows, so those battery adjustments will not appear until the widget
+asset adds matching `UPowerUpStatWidgetUI` rows.
 
 ## Debug Point Grant Command
 
@@ -257,3 +276,4 @@ This is intended only as a debug convenience so `PowerUp`, `AdjustShip`, and `Co
 - `UConvertSpeedUI::NativeGetDesiredFocusTarget` now returns a live visible increment/decrement button so gamepad focus does not land on the old hidden button widgets left in the blueprint for graph compatibility.
 - `UConvertSpeedUI` also marks the live `ZhoenusButton` controls as selectable-on-focus and applies explicit left/right/up/down navigation so controller input can move across the forward and reverse convert rows reliably.
 - `AdjustShip` point accounting is now explicit in `USaveThemAllGameInstance`, not implicit blueprint subtraction. If design later wants asymmetric downgrade refunds, introduce that deliberately there instead of burying it in widget math.
+- The next `AdjustShip` layout pass should add visible battery-capacity and battery-recharge rows so the native battery point model is exposed to players.

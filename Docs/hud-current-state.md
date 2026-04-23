@@ -41,6 +41,7 @@ The Canvas path is the part we can describe precisely from source.
 Current Canvas elements:
 
 - optional screen-space aim triangle
+- battery meter with label and percentage readout
 - forward and reverse speed bar
 - thrust / acceleration bar
 - pitch indicator triangles
@@ -48,8 +49,8 @@ Current Canvas elements:
 - yaw indicator triangles
 - stabilize bar
 
-There are no text labels, tick marks, units, or calibration markers in this
-Canvas layer.
+Most of the Canvas layer is still unlabeled, but the battery meter now adds a
+small `BAT` label and percentage readout.
 
 ## Reticle State
 
@@ -72,6 +73,7 @@ The current layout is hard-coded in normalized screen-space percentages.
 
 Right-edge cluster:
 
+- battery meter at about `91%` width, `72%` height
 - speed at about `98%` width, `70%` height
 - thrust at about `97%` width, `70%` height
 - stabilize at about `97%` width, `70%` height with a further left offset
@@ -100,6 +102,7 @@ instrument panel layout.
 
 The bars read directly from pawn state:
 
+- battery uses `UZhoenusBatteryComponent::GetEnergyFraction()`
 - speed uses `CurrentForwardSpeed`
 - thrust uses `CachedInput.W`
 - pitch uses `CachedInput.X`
@@ -111,6 +114,15 @@ This is important: most of the HUD reflects current input state, not actual ship
 attitude or world-relative flight state.
 
 ## Current Visual Behavior
+
+### Battery
+
+- battery is a vertical meter near the right-edge flight bars
+- the meter shows fill amount from the ship's `UZhoenusBatteryComponent`
+- the battery frame is dark with a bright cyan fill in its normal state
+- the fill shifts to orange when energy drops into the low-battery threshold
+- the meter also draws `BAT` above the bar and a percentage below it
+- it represents a live ship-system state, not player input
 
 ### Speed
 
@@ -177,7 +189,7 @@ clear limitations:
 
 - most bars visualize input, not aircraft attitude or target state
 - several channels use asymmetric positive vs negative scaling
-- there are no labels, legends, or units
+- only the battery channel is explicitly labeled
 - the layout is hand-tuned by screen percentage rather than systemized
 - the reticle overlay path still exists in code even though world-space reticle is preferred
 - pitch feedback is still input-driven rather than attitude-driven
@@ -215,6 +227,7 @@ The current HUD does prove:
 - the game has a working custom `AHUD`
 - the ship exposes enough state to drive instrumentation
 - the Canvas layer can show thrust / pitch / yaw / roll / stabilize information
+- the Canvas layer can show a live battery status for the ship's firing system
 
 It does not yet prove:
 

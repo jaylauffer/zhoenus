@@ -22,6 +22,7 @@ UE5 flying-action game project centered on the `SaveThemAll` loop: fly the ship,
 - [Level-1 media playback](Docs/level1-media-playback.md)
 - [SaveThemAll music playback](Docs/save-them-all-music-playback.md)
 - [EAB + qcoin integration plan](Docs/eab-qcoin-integration-plan.md)
+- [Game design concepts](Docs/game-design-concepts.md)
 
 ## Key Runtime Files
 
@@ -42,8 +43,10 @@ UE5 flying-action game project centered on the `SaveThemAll` loop: fly the ship,
 - `AdjustShip` and `PowerUpStatWidget` are now stripped back to layout assets. Their old event-graph stat init and stat-value helper graphs were removed, so `UPowerUpStatWidgetUI` and `UAdjustShipUI` are the only active source of stat-row behavior and values.
 - `UPowerUpStatWidgetUI` now owns the visible stat-row value directly instead of relying on blueprint click graphs. It also restores the row label from the blueprint `DisplayLabel` property so the layout asset still defines the human-readable stat name.
 - `AdjustShip` and `Convert` are separate systems again. `AdjustShip` edits persistent handling stats such as `ForwardAcceleration`, `ReverseAcceleration`, `PitchAcceleration`, `YawAcceleration`, and `RollAcceleration`. `Convert` still operates on `MaxSpeed` and `MinSpeed`.
+- `AdjustShip` native point accounting now also supports `MaxBatteryEnergy` and `BatteryRechargeRate`, but the current `AdjustShip` widget asset still needs matching row widgets before those battery adjustments become visible in-menu.
 - The current default ship thrust baselines are `ForwardAcceleration = 500` and `ReverseAcceleration = 200`.
 - `AdjustShip` now owns its point accounting in native code through `USaveThemAllGameInstance`. The current rule is intentionally symmetric relative to the saved build you opened the screen with, and it uses fractional per-unit cost ratios rather than a flat `1:1` spend. The current temporary ratio table is: `ForwardAcceleration = 0.32`, `ReverseAcceleration = 0.18`, `PitchAcceleration = 0.07`, `YawAcceleration = 0.10`, and `RollAcceleration = 0.08`.
+- The `PowerUp`, `Convert`, and `AdjustShip` menu color scheme still needs a contrast/accessibility pass. Current contrast is weaker than it should be for some players; this matters, but reticle readability remains the higher-priority visual issue.
 - `USaveThemAllGameInstance::LoadGame` now repairs legacy saves that predate `ReverseAcceleration`. Those older saves deserialize that field as zero, so the loader normalizes it back to the baseline reverse thrust value instead of presenting a broken stat row on fresh launch.
 - Debug point grants are now available through the shared player-controller console command `GrantPowerPoints <amount>` in non-shipping builds only. It adds directly to `USaveThemAllGameInstance::points`, mirrors the grant into `AcquiredPoints`, and saves immediately so the `PowerUp` screens can be tested without playing a full round.
 - Project source control is intentionally disabled. `Config/DefaultSourceControlSettings.ini` sets `Provider=None`, and the local Mac editor cache mirrors that in `Saved/Config/MacEditor/SourceControlSettings.ini` to avoid Perforce startup noise on this machine.
