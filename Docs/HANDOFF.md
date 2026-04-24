@@ -12,7 +12,8 @@ AdjustShipUI label restoration via blueprint path (no gameplay changes)
 
 ### Current Focus
 - Reticle Refinement: Ensure visual feedback supports 6DOF flight and goal alignment
-- HUD Form-Factor Rules: Keep critical instruments out of thumb-occlusion zones and stop treating desktop placement as automatically valid on mobile
+- HUD Form-Factor Rules: Keep critical instruments out of thumb-occlusion zones and stop treating desktop placement as automatically valid on mobile. Battery now has a desktop/mobile profile split; the rest of the HUD still needs that treatment.
+- HUD Personalization Direction: Long-term HUD customization and cosmetic theme packs are a valid product direction, but readability/accessibility must land first. Monetize expression, never utility. All HUD utility must remain available to all players, and monetization should stay cosmetic
 - Menu Contrast Accessibility: Improve `PowerUp`, `Convert`, and `AdjustShip` contrast so the menus are easier to read for more players, but keep this below reticle work in priority
 - Button Highlight Usability: Improve visibility on Startup/AdjustShipUI screens without distracting from flight mechanics
 - Music Routing: Keep gameplay tracks and menu tracks separate so menu screens

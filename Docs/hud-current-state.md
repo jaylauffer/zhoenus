@@ -74,10 +74,16 @@ The current layout is hard-coded in normalized screen-space percentages.
 
 Right-edge cluster:
 
-- battery meter at about `91%` width, `72%` height
+- desktop / console battery meter at about `91%` width, `72%` height
 - speed at about `98%` width, `70%` height
 - thrust at about `97%` width, `70%` height
 - stabilize at about `97%` width, `70%` height with a further left offset
+
+Mobile landscape battery:
+
+- battery auto-resolves to a horizontal top-center bar on `iOS` / `Android`
+- the mobile bar is clamped against safe-zone padding instead of assuming a flat rectangle
+- label and percentage sit inline with the bar so the whole cluster stays compact
 
 Roll:
 
@@ -127,11 +133,14 @@ attitude or world-relative flight state.
 
 ### Battery
 
-- battery is a vertical meter near the right-edge flight bars
+- battery is now profile-driven instead of using one universal placement
+- desktop / console keeps a vertical meter near the right-edge flight bars
+- mobile landscape touch uses a horizontal top-center bar
 - the meter shows fill amount from the ship's `UZhoenusBatteryComponent`
 - the battery frame is dark with a bright cyan fill in its normal state
 - the fill shifts to orange when energy drops into the low-battery threshold
-- the meter also draws `BAT` above the bar and a percentage below it
+- desktop draws `BAT` above the bar and a percentage below it
+- mobile draws `BAT` to the left of the bar and the percentage to the right
 - it represents a live ship-system state, not player input
 
 ### Speed
@@ -204,8 +213,8 @@ clear limitations:
 - the reticle overlay path still exists in code even though world-space reticle is preferred
 - pitch feedback is still input-driven rather than attitude-driven
 - yaw feedback is still input-driven rather than attitude-driven
-- the battery meter currently sits in the right-thumb occlusion zone for mobile / touch play
-- there is no mature form-factor-specific HUD layout policy yet
+- only the battery currently has an explicit form-factor layout split
+- there is still no mature profile system for the rest of the HUD
 
 ## Pitch State
 
@@ -247,16 +256,69 @@ It does not yet prove:
 - a polished flight-instrument language
 - cross-platform consistency
 
+## Future Direction: Player HUD Customization
+
+The current HUD should eventually grow into a player-facing customization system.
+
+Likely long-range needs:
+
+- choosing between layout profiles
+- moving or compacting selected instruments
+- selecting different HUD themes or skins
+- deciding which secondary indicators remain visible
+
+The current battery profile split is a first step in that direction, not the end
+state.
+
+Important guardrails:
+
+- the default HUD still needs to be strong without customization
+- critical readability should not depend on player tweaking
+- reticle clarity and core flight information should remain protected
+- all HUD utility should remain available in the base game
+
+## Monetization Guardrail
+
+HUD personalization is also a plausible monetization opportunity, but only if
+the project treats it as cosmetic expression rather than functional advantage.
+This should be read strictly, not loosely.
+
+Good future monetization candidates:
+
+- cosmetic HUD themes
+- alternate frame / meter styling
+- visual-only reticle skins that preserve gameplay truth
+
+Bad monetization candidates:
+
+- selling better readability
+- selling stronger targeting feedback
+- selling HUD utility or instrumentation features
+- paywalling accessibility or layout fixes
+
+Baseline rule:
+
+- monetize expression, never utility
+- players may choose different looks
+- players should not need to pay for HUD usefulness
+- utility must remain available regardless of cosmetic choice
+
 ### Mobile Occlusion Note
 
-The current battery placement is acceptable on desktop-class screens, but it is
-not acceptable as a final mobile layout.
+The original battery placement was acceptable on desktop-class screens, but it
+was not acceptable as a final mobile layout.
 
-Current problem:
+That specific battery problem is now addressed:
 
-- the battery meter lives in the lower-right cluster
-- on touch devices that region is likely to sit under the player's right thumb
-- that makes a now-important ship-system indicator hard or impossible to use
+- desktop / console keeps the lower-right vertical battery
+- mobile landscape now auto-resolves to a horizontal top-center battery
+- the mobile battery is clamped by safe-zone padding so it does not assume a
+  notch-free screen
+
+What still remains:
+
+- the rest of the Canvas HUD still needs the same form-factor discipline
+- battery is the first profile-aware instrument, not the final HUD solution
 
 This should be treated as a concrete HUD-design issue, not a minor polish nit.
 

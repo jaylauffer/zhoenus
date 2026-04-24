@@ -3,9 +3,11 @@
 #include "CanvasItem.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Blueprint/UserWidget.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "SpaceshipPawn.h"
 #include "ZhoenusBatteryComponent.h"
 #include "GameFramework/PlayerController.h"
+#include "Kismet/GameplayStatics.h"
 #include "GlobalRenderResources.h"
 
 #define ON_SCREEN_DEBUG 1
@@ -183,15 +185,116 @@ void ASpaceshipHUD::DrawBatteryIndicator(const ASpaceshipPawn& Pawn)
 	}
 
 	const float EnergyFraction = Battery->GetEnergyFraction();
+	const EZhoenusHUDLayoutProfile LayoutProfile = ResolveHUDLayoutProfile();
+	const bool bUseMobileLandscapeLayout = LayoutProfile == EZhoenusHUDLayoutProfile::MobileLandscapeTouch;
+	const FLinearColor FillColor = EnergyFraction <= BatteryIndicatorLowThreshold ? BatteryIndicatorLowColor : BatteryIndicatorColor;
+	const FString Label = TEXT("BAT");
+	const FString PercentText = FString::Printf(TEXT("%d%%"), FMath::RoundToInt(EnergyFraction * 100.f));
+
+	float LabelWidth = 0.f;
+	float LabelHeight = 0.f;
+	float PercentWidth = 0.f;
+	float PercentHeight = 0.f;
+	GetTextSize(Label, LabelWidth, LabelHeight, nullptr, BatteryIndicatorTextScale);
+	GetTextSize(PercentText, PercentWidth, PercentHeight, nullptr, BatteryIndicatorTextScale);
+
+	FVector4 SafePadding(0.f, 0.f, 0.f, 0.f);
+	FVector2D SafePaddingScale(0.f, 0.f);
+	FVector4 SpillOverPadding(0.f, 0.f, 0.f, 0.f);
+	UWidgetBlueprintLibrary::GetSafeZonePadding(this, SafePadding, SafePaddingScale, SpillOverPadding);
+
+	if (bUseMobileLandscapeLayout)
+	{
+		const float MeterWidth = MobileBatteryIndicatorWidth;
+		const float MeterHeight = MobileBatteryIndicatorHeight;
+		const float Padding = FMath::Clamp(MobileBatteryIndicatorPadding, 0.f, MeterHeight * 0.4f);
+		const float InnerWidth = FMath::Max(1.f, MeterWidth - Padding * 2.f);
+		const float InnerHeight = FMath::Max(1.f, MeterHeight - Padding * 2.f);
+		const float FillWidth = InnerWidth * EnergyFraction;
+		const float SafeMargin = FMath::Max(0.f, MobileBatteryIndicatorSafeMargin);
+		const float TextGap = FMath::Max(0.f, MobileBatteryIndicatorTextGap);
+		const float TerminalGap = 3.f;
+		const float TerminalWidth = 6.f;
+		const float TerminalHeight = FMath::Max(6.f, MeterHeight * 0.52f);
+		const float ClusterWidth = LabelWidth + TextGap + MeterWidth + TerminalGap + TerminalWidth + TextGap + PercentWidth;
+		float ClusterLeft = Canvas->ClipX * MobileBatteryIndicatorHorizontalAnchor - ClusterWidth * 0.5f;
+		const float MinClusterLeft = SafePadding.X + SafeMargin;
+		const float MaxClusterLeft = FMath::Max(MinClusterLeft, Canvas->ClipX - SafePadding.Z - ClusterWidth - SafeMargin);
+		ClusterLeft = FMath::Clamp(
+			ClusterLeft,
+			MinClusterLeft,
+			MaxClusterLeft);
+
+		const float MeterLeft = ClusterLeft + LabelWidth + TextGap;
+		float MeterTop = Canvas->ClipY * MobileBatteryIndicatorVerticalAnchor - MeterHeight * 0.5f;
+		const float MinMeterTop = SafePadding.Y + SafeMargin;
+		const float MaxMeterTop = FMath::Max(MinMeterTop, Canvas->ClipY - SafePadding.W - MeterHeight - SafeMargin);
+		MeterTop = FMath::Clamp(
+			MeterTop,
+			MinMeterTop,
+			MaxMeterTop);
+
+		DrawText(
+			Label,
+			BatteryIndicatorTextColor,
+			ClusterLeft,
+			MeterTop + (MeterHeight - LabelHeight) * 0.5f,
+			nullptr,
+			BatteryIndicatorTextScale,
+			false);
+
+		DrawRect(BatteryIndicatorBackgroundColor, MeterLeft, MeterTop, MeterWidth, MeterHeight);
+		if (FillWidth > 0.f)
+		{
+			DrawRect(
+				FillColor,
+				MeterLeft + Padding,
+				MeterTop + Padding,
+				FillWidth,
+				InnerHeight);
+		}
+
+		FLinearColor BorderColor = BatteryIndicatorTextColor;
+		BorderColor.A *= 0.65f;
+		DrawLine(MeterLeft, MeterTop, MeterLeft + MeterWidth, MeterTop, BorderColor, 1.5f);
+		DrawLine(MeterLeft + MeterWidth, MeterTop, MeterLeft + MeterWidth, MeterTop + MeterHeight, BorderColor, 1.5f);
+		DrawLine(MeterLeft + MeterWidth, MeterTop + MeterHeight, MeterLeft, MeterTop + MeterHeight, BorderColor, 1.5f);
+		DrawLine(MeterLeft, MeterTop + MeterHeight, MeterLeft, MeterTop, BorderColor, 1.5f);
+
+		const float TerminalLeft = MeterLeft + MeterWidth + TerminalGap;
+		DrawRect(
+			BorderColor,
+			TerminalLeft,
+			MeterTop + (MeterHeight - TerminalHeight) * 0.5f,
+			TerminalWidth,
+			TerminalHeight);
+
+		DrawText(
+			PercentText,
+			BatteryIndicatorTextColor,
+			TerminalLeft + TerminalWidth + TextGap,
+			MeterTop + (MeterHeight - PercentHeight) * 0.5f,
+			nullptr,
+			BatteryIndicatorTextScale,
+			false);
+
+		return;
+	}
+
 	const float MeterWidth = BatteryIndicatorWidth;
 	const float MeterHeight = BatteryIndicatorHeight;
-	const float MeterLeft = Canvas->ClipX * BatteryIndicatorHorizontalAnchor - MeterWidth * 0.5f;
-	const float MeterTop = Canvas->ClipY * BatteryIndicatorVerticalAnchor - MeterHeight * 0.5f;
+	float MeterLeft = Canvas->ClipX * BatteryIndicatorHorizontalAnchor - MeterWidth * 0.5f;
+	float MeterTop = Canvas->ClipY * BatteryIndicatorVerticalAnchor - MeterHeight * 0.5f;
+	const float DesktopMinLeft = SafePadding.X;
+	const float DesktopMaxLeft = FMath::Max(DesktopMinLeft, Canvas->ClipX - SafePadding.Z - MeterWidth);
+	const float DesktopMinTop = SafePadding.Y;
+	const float DesktopMaxTop = FMath::Max(DesktopMinTop, Canvas->ClipY - SafePadding.W - MeterHeight);
+	MeterLeft = FMath::Clamp(MeterLeft, DesktopMinLeft, DesktopMaxLeft);
+	MeterTop = FMath::Clamp(MeterTop, DesktopMinTop, DesktopMaxTop);
 	const float Padding = FMath::Clamp(BatteryIndicatorPadding, 0.f, MeterWidth * 0.4f);
 	const float InnerWidth = FMath::Max(1.f, MeterWidth - Padding * 2.f);
 	const float InnerHeight = FMath::Max(1.f, MeterHeight - Padding * 2.f);
 	const float FillHeight = InnerHeight * EnergyFraction;
-	const FLinearColor FillColor = EnergyFraction <= BatteryIndicatorLowThreshold ? BatteryIndicatorLowColor : BatteryIndicatorColor;
 
 	DrawRect(BatteryIndicatorBackgroundColor, MeterLeft, MeterTop, MeterWidth, MeterHeight);
 	if (FillHeight > 0.f)
@@ -220,10 +323,6 @@ void ASpaceshipHUD::DrawBatteryIndicator(const ASpaceshipPawn& Pawn)
 		TerminalWidth,
 		TerminalHeight);
 
-	const FString Label = TEXT("BAT");
-	float LabelWidth = 0.f;
-	float LabelHeight = 0.f;
-	GetTextSize(Label, LabelWidth, LabelHeight, nullptr, BatteryIndicatorTextScale);
 	DrawText(
 		Label,
 		BatteryIndicatorTextColor,
@@ -232,11 +331,6 @@ void ASpaceshipHUD::DrawBatteryIndicator(const ASpaceshipPawn& Pawn)
 		nullptr,
 		BatteryIndicatorTextScale,
 		false);
-
-	const FString PercentText = FString::Printf(TEXT("%d%%"), FMath::RoundToInt(EnergyFraction * 100.f));
-	float PercentWidth = 0.f;
-	float PercentHeight = 0.f;
-	GetTextSize(PercentText, PercentWidth, PercentHeight, nullptr, BatteryIndicatorTextScale);
 	DrawText(
 		PercentText,
 		BatteryIndicatorTextColor,
@@ -245,6 +339,23 @@ void ASpaceshipHUD::DrawBatteryIndicator(const ASpaceshipPawn& Pawn)
 		nullptr,
 		BatteryIndicatorTextScale,
 		false);
+}
+
+EZhoenusHUDLayoutProfile ASpaceshipHUD::ResolveHUDLayoutProfile() const
+{
+	if (BatteryLayoutProfile != EZhoenusHUDLayoutProfile::Auto)
+	{
+		return BatteryLayoutProfile;
+	}
+
+	const FString PlatformName = UGameplayStatics::GetPlatformName();
+	if (PlatformName.Equals(TEXT("IOS"), ESearchCase::IgnoreCase)
+		|| PlatformName.Equals(TEXT("Android"), ESearchCase::IgnoreCase))
+	{
+		return EZhoenusHUDLayoutProfile::MobileLandscapeTouch;
+	}
+
+	return EZhoenusHUDLayoutProfile::DesktopConsole;
 }
 
 void ASpaceshipHUD::DrawAimReticle(const ASpaceshipPawn& Pawn)

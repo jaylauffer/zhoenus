@@ -4,6 +4,14 @@
 #include "GameFramework/HUD.h"
 #include "SpaceshipHUD.generated.h"
 
+UENUM()
+enum class EZhoenusHUDLayoutProfile : uint8
+{
+	Auto,
+	DesktopConsole,
+	MobileLandscapeTouch
+};
+
 UCLASS(Config=Game)
 class ASpaceshipHUD : public AHUD
 {
@@ -21,6 +29,7 @@ private:
 	void DrawAimTriangle(const FVector2D& ScreenLocation);
 	void DrawAimRangeReadout(const class ASpaceshipPawn& Pawn);
 	void DrawBatteryIndicator(const class ASpaceshipPawn& Pawn);
+	EZhoenusHUDLayoutProfile ResolveHUDLayoutProfile() const;
 	void DrawPitchIndicator(const class ASpaceshipPawn& Pawn);
 	void DrawPitchTriangle(const FVector2D& BaseCenter, float Width, float Height, const FLinearColor& Color, bool bPointDown);
 	void DrawYawIndicator(const class ASpaceshipPawn& Pawn);
@@ -68,6 +77,9 @@ private:
 	UPROPERTY(Config, EditAnywhere, Category = "Battery")
 	bool bDrawBatteryIndicator = true;
 
+	UPROPERTY(Config, EditAnywhere, Category = "Battery")
+	EZhoenusHUDLayoutProfile BatteryLayoutProfile = EZhoenusHUDLayoutProfile::Auto;
+
 	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float BatteryIndicatorHorizontalAnchor = 0.91f;
 
@@ -100,6 +112,27 @@ private:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "0.25"))
 	float BatteryIndicatorTextScale = 0.9f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float MobileBatteryIndicatorHorizontalAnchor = 0.5f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float MobileBatteryIndicatorVerticalAnchor = 0.1f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "48.0"))
+	float MobileBatteryIndicatorWidth = 220.f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "10.0"))
+	float MobileBatteryIndicatorHeight = 18.f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "0.0"))
+	float MobileBatteryIndicatorPadding = 3.f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "0.0"))
+	float MobileBatteryIndicatorSafeMargin = 12.f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Battery", meta = (ClampMin = "0.0"))
+	float MobileBatteryIndicatorTextGap = 10.f;
 
 	UPROPERTY(Config, EditAnywhere, Category = "Pitch")
 	bool bDrawPitchIndicator = true;
