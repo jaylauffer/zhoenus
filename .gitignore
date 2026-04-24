@@ -42,12 +42,6 @@
 *.VC.db
 *.VC.opendb
 
-#spatial builds, logs, schema, snapshots
-spatial/build/*
-spatial/logs/*
-spatial/schema/*
-spatial/snapshots/*
-
 # Precompiled Assets
 SourceArt/**/*.png
 SourceArt/**/*.tga
