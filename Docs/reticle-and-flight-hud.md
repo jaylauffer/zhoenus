@@ -13,15 +13,20 @@ The current runtime path is:
 
 - `ASpaceshipPawn::GetProjectileSpawnLocation()` returns the live muzzle origin
 - `ASpaceshipPawn::GetProjectileFireDirection()` returns the live forward shot direction
-- `ASpaceshipPawn::GetProjectileAimPoint()` line-traces on `ECC_Visibility` and returns either the hit point or the trace end
-- `AZhoenusPawn::UpdateAimProjector()` places the reticle at that live aim point, clamps it by config distance, keeps a minimum forward standoff from the muzzle, and only then applies the depth-bias pullback
+- `ASpaceshipPawn::GetProjectileAimTrace()` is now the shared trace-result helper and returns spawn location, aim point, hit state, and traced distance
+- `ASpaceshipPawn::GetProjectileAimPoint()` now delegates to that shared trace-result helper for compatibility
+- `AZhoenusPawn::UpdateAimProjector()` places the reticle from that shared trace result, clamps it by config distance, keeps a minimum forward standoff from the muzzle, and only then applies the depth-bias pullback
 - `AZhoenusPawn::CreateAimProjector()` configures a `UMaterialBillboardComponent` using `/Game/Textures/M_AimProjector`
+- the legacy HUD overlay path in `ASpaceshipHUD` now also uses that same shared trace result instead of re-running its own aim math
+- `ASpaceshipHUD` can now draw a small range readout from that same shared trace result without re-enabling the old HUD triangle overlay
 
 Relevant files:
 
 - `Source/Zhoenus/SpaceshipPawn.cpp`
+- `Source/Zhoenus/SpaceshipPawn.h`
 - `Source/Zhoenus/ZhoenusPawn.cpp`
 - `Source/Zhoenus/ZhoenusPawn.h`
+- `Source/Zhoenus/SpaceshipHUD.cpp`
 - `Config/DefaultGame.ini`
 
 ## Current Configuration
@@ -47,6 +52,11 @@ config:
 - `bDrawAimReticle=False`
 
 That means the intended reticle path is the in-world billboard, not the screen overlay.
+
+The quick readout path is separate:
+
+- a small Canvas range number may still be drawn near the projected aim point
+- this does not require turning the old HUD reticle triangle back on
 
 ## Asset Path
 
@@ -105,6 +115,25 @@ What still remains open:
 - whether ship customization should continue to express this as `ProjectileAggroRadiusMultiplier`
 - whether the project should eventually replace that multiplier with a direct shared radius in `FShipStats`
 - whether different ships should expose different visual-to-gameplay scaling through their own overrides
+
+## Quick Feedback vs Target Feedback
+
+The current quick feedback is a numeric range readout.
+
+Current behavior:
+
+- the range readout uses the shared aim trace
+- it shows distance from muzzle to the traced aim point
+- by default it only appears when the trace has a blocking hit
+- it is a simple readability aid, not a target-acquired indicator
+
+The desired richer feedback is still different:
+
+- when a `DonutFlyer` is effectively "in range" of the reticle / projectile influence space,
+  the reticle should be able to shift from green toward red
+
+That future target-feedback cue should be treated as a follow-up layer, not mixed
+into the baseline range-readout pass.
 
 ## Design Goals
 

@@ -19,6 +19,7 @@ public:
 private:
 	void DrawAimReticle(const class ASpaceshipPawn& Pawn);
 	void DrawAimTriangle(const FVector2D& ScreenLocation);
+	void DrawAimRangeReadout(const class ASpaceshipPawn& Pawn);
 	void DrawBatteryIndicator(const class ASpaceshipPawn& Pawn);
 	void DrawPitchIndicator(const class ASpaceshipPawn& Pawn);
 	void DrawPitchTriangle(const FVector2D& BaseCenter, float Width, float Height, const FLinearColor& Color, bool bPointDown);
@@ -48,6 +49,21 @@ private:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Reticle")
 	FLinearColor AimReticleColor = FLinearColor(0.68f, 1.f, 0.2f, 0.58f);
+
+	UPROPERTY(Config, EditAnywhere, Category = "Reticle")
+	bool bDrawAimRangeReadout = true;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Reticle")
+	bool bAimRangeReadoutRequireBlockingHit = true;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Reticle", meta = (ClampMin = "0.0"))
+	float AimRangeReadoutVerticalOffset = 28.f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Reticle", meta = (ClampMin = "0.25"))
+	float AimRangeReadoutTextScale = 0.9f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Reticle")
+	FLinearColor AimRangeReadoutColor = FLinearColor(0.82f, 1.f, 0.86f, 0.92f);
 
 	UPROPERTY(Config, EditAnywhere, Category = "Battery")
 	bool bDrawBatteryIndicator = true;

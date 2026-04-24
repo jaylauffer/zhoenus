@@ -52,6 +52,7 @@ void ASpaceshipHUD::DrawHUD()
 	ASpaceshipPawn* pawn{ Cast<ASpaceshipPawn>(GetOwningPawn()) };
 	if (pawn)
 	{
+		DrawAimRangeReadout(*pawn);
 		DrawAimReticle(*pawn);
 		DrawBatteryIndicator(*pawn);
 		DrawPitchIndicator(*pawn);
@@ -121,6 +122,51 @@ void ASpaceshipHUD::DrawHUD()
 	}
 	
 
+}
+
+void ASpaceshipHUD::DrawAimRangeReadout(const ASpaceshipPawn& Pawn)
+{
+	if (!bDrawAimRangeReadout || Canvas == nullptr || PlayerOwner == nullptr)
+	{
+		return;
+	}
+
+	const FProjectileAimTraceResult AimTrace = Pawn.GetProjectileAimTrace(AimReticleDistance);
+	if (bAimRangeReadoutRequireBlockingHit && !AimTrace.bHasBlockingHit)
+	{
+		return;
+	}
+
+	FVector2D ScreenLocation;
+	if (!PlayerOwner->ProjectWorldLocationToScreen(AimTrace.AimPoint, ScreenLocation, false))
+	{
+		return;
+	}
+
+	if (ScreenLocation.X < -ReticleScreenMargin
+		|| ScreenLocation.Y < -ReticleScreenMargin
+		|| ScreenLocation.X > Canvas->ClipX + ReticleScreenMargin
+		|| ScreenLocation.Y > Canvas->ClipY + ReticleScreenMargin)
+	{
+		return;
+	}
+
+	const float DistanceMeters = AimTrace.Distance / 100.f;
+	const FString RangeText = DistanceMeters < 10.f
+		? FString::Printf(TEXT("%.1fm"), DistanceMeters)
+		: FString::Printf(TEXT("%dm"), FMath::RoundToInt(DistanceMeters));
+
+	float TextWidth = 0.f;
+	float TextHeight = 0.f;
+	GetTextSize(RangeText, TextWidth, TextHeight, nullptr, AimRangeReadoutTextScale);
+	DrawText(
+		RangeText,
+		AimRangeReadoutColor,
+		ScreenLocation.X - TextWidth * 0.5f,
+		ScreenLocation.Y + AimRangeReadoutVerticalOffset,
+		nullptr,
+		AimRangeReadoutTextScale,
+		false);
 }
 
 void ASpaceshipHUD::DrawBatteryIndicator(const ASpaceshipPawn& Pawn)
@@ -208,8 +254,9 @@ void ASpaceshipHUD::DrawAimReticle(const ASpaceshipPawn& Pawn)
 		return;
 	}
 
+	const FProjectileAimTraceResult AimTrace = Pawn.GetProjectileAimTrace(AimReticleDistance);
 	FVector2D ScreenLocation;
-	if (!PlayerOwner->ProjectWorldLocationToScreen(Pawn.GetProjectileAimPoint(AimReticleDistance), ScreenLocation, false))
+	if (!PlayerOwner->ProjectWorldLocationToScreen(AimTrace.AimPoint, ScreenLocation, false))
 	{
 		return;
 	}

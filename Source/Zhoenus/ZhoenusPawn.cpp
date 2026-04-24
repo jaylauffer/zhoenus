@@ -128,11 +128,9 @@ void AZhoenusPawn::UpdateAimProjector()
 	}
 
 	const FVector FireDirection = GetProjectileFireDirection();
-	const FVector SpawnLocation = GetProjectileSpawnLocation();
-	const FVector RawAimPoint = GetProjectileAimPoint(AimProjectorTraceDistance);
-	const float RawDistance = FVector::Dist(SpawnLocation, RawAimPoint);
-	const float VisibleDistance = FMath::Min(RawDistance, AimProjectorMaxVisibleDistance);
-	const FVector AimPoint = SpawnLocation + FireDirection * VisibleDistance - FireDirection * AimProjectorDepthBias;
+	const FProjectileAimTraceResult AimTrace = GetProjectileAimTrace(AimProjectorTraceDistance);
+	const float VisibleDistance = FMath::Min(AimTrace.Distance, AimProjectorMaxVisibleDistance);
+	const FVector AimPoint = AimTrace.SpawnLocation + FireDirection * VisibleDistance - FireDirection * AimProjectorDepthBias;
 
 	AimProjectorComponent->SetWorldLocation(AimPoint);
 	AimProjectorComponent->SetVisibility(true, true);
