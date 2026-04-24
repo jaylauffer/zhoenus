@@ -113,15 +113,7 @@ void AZapEmProjectile::Tick(float DeltaTime)
 
     // Distance traveled
     const float TravelDist = FVector::Dist(GetActorLocation(), LaunchLocation);
-
-    // Linear scale factor (1 → BaseRadius, 2 → double, etc.)
-    const float ScaleFactor = 1.f + TravelDist / ProjectileRadiusScale;
-	const float MaxEffectiveRadius = FMath::Max(MaxProjectileRadius, InitialAggroRadius);
-
-    // Compute new radius, clamp to max
-    const float DesiredRadius = FMath::Clamp(InitialAggroRadius * ScaleFactor,
-                                            InitialAggroRadius,
-                                            MaxEffectiveRadius);
+    const float DesiredRadius = GetAggroRadiusAtTravelDistance(InitialAggroRadius, TravelDist);
 
     // Apply it only if it changed (avoid needless updates)
     if (!FMath::IsNearlyEqual(AggroSphere->GetUnscaledSphereRadius(), DesiredRadius, 0.1f))
@@ -149,6 +141,41 @@ float AZapEmProjectile::ResolveAggroRadius() const
 	}
 
 	return BaseProjectileRadius * AggroRadiusMultiplier;
+}
+
+float AZapEmProjectile::GetConfiguredProjectileSpeed() const
+{
+	if (ProjectileMovement == nullptr)
+	{
+		return 0.f;
+	}
+
+	return FMath::Max(ProjectileMovement->InitialSpeed, ProjectileMovement->MaxSpeed);
+}
+
+float AZapEmProjectile::GetConfiguredProjectileLifetime() const
+{
+	return FMath::Max(0.f, InitialLifeSpan);
+}
+
+float AZapEmProjectile::GetConfiguredMaxTravelDistance() const
+{
+	return GetConfiguredProjectileSpeed() * GetConfiguredProjectileLifetime();
+}
+
+float AZapEmProjectile::GetAggroRadiusAtTravelDistance(const float StartingAggroRadius, const float TravelDistance) const
+{
+	const float InitialRadius = FMath::Max(0.f, StartingAggroRadius);
+	if (InitialRadius <= KINDA_SMALL_NUMBER)
+	{
+		return 0.f;
+	}
+
+	const float SafeRadiusScale = ProjectileRadiusScale > KINDA_SMALL_NUMBER ? ProjectileRadiusScale : 1.f;
+	const float ScaleFactor = 1.f + FMath::Max(0.f, TravelDistance) / SafeRadiusScale;
+	const float MaxEffectiveRadius = FMath::Max(MaxProjectileRadius, InitialRadius);
+
+	return FMath::Clamp(InitialRadius * ScaleFactor, InitialRadius, MaxEffectiveRadius);
 }
 
 void AZapEmProjectile::TriggerDonutFlyerAggro(ADonutFlyerPawn* Pawn, EDonutAggroEventType EventType, float AggroAmount, bool bCountPlayerShot, const FVector& ContactLocation)

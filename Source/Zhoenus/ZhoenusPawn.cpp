@@ -150,10 +150,16 @@ void AZhoenusPawn::UpdateAimProjector(const float DeltaSeconds)
 	}
 
 	const FVector FireDirection = GetProjectileFireDirection();
-	const FProjectileAimTraceResult AimTrace = GetProjectileAimTrace(AimProjectorTraceDistance);
-	const float VisibleDistance = FMath::Min(AimTrace.Distance, AimProjectorMaxVisibleDistance);
-	const FVector AimPoint = AimTrace.SpawnLocation + FireDirection * VisibleDistance - FireDirection * AimProjectorDepthBias;
-	const float TargetPresence = GetAimProjectorTargetPresence(AimTrace, VisibleDistance);
+	const FProjectileAimTraceResult VisibleAimTrace = GetProjectileAimTrace(AimProjectorTraceDistance);
+	const float VisibleDistance = FMath::Min(VisibleAimTrace.Distance, AimProjectorMaxVisibleDistance);
+	const FVector AimPoint = VisibleAimTrace.SpawnLocation + FireDirection * VisibleDistance - FireDirection * AimProjectorDepthBias;
+
+	const AZapEmProjectile* const ProjectileDefaults = AZapEmProjectile::StaticClass()->GetDefaultObject<AZapEmProjectile>();
+	const float ProjectileRangeTraceDistance = ProjectileDefaults != nullptr
+		? ProjectileDefaults->GetConfiguredMaxTravelDistance()
+		: AimProjectorTraceDistance;
+	const FProjectileAimTraceResult ProjectileRangeTrace = GetProjectileAimTrace(ProjectileRangeTraceDistance);
+	const float TargetPresence = GetAimProjectorAggroCueStrength(ProjectileRangeTrace);
 
 	AimProjectorComponent->SetWorldLocation(AimPoint);
 	AimProjectorComponent->SetVisibility(true, true);
@@ -165,7 +171,7 @@ float AZhoenusPawn::GetProjectileAggroRadius() const
 	return FMath::Max(0.f, AimProjectorScale * AimProjectorAggroRadiusScale);
 }
 
-float AZhoenusPawn::GetAimProjectorTargetPresence(const FProjectileAimTraceResult& AimTrace, const float VisibleDistance) const
+float AZhoenusPawn::GetAimProjectorAggroCueStrength(const FProjectileAimTraceResult& ProjectileRangeTrace) const
 {
 	UWorld* const World = GetWorld();
 	if (World == nullptr)
@@ -173,16 +179,22 @@ float AZhoenusPawn::GetAimProjectorTargetPresence(const FProjectileAimTraceResul
 		return 0.f;
 	}
 
-	const float ClampedVisibleDistance = FMath::Max(0.f, VisibleDistance);
-	const float AggroRadius = GetProjectileAggroRadius();
-	if (ClampedVisibleDistance <= KINDA_SMALL_NUMBER || AggroRadius <= KINDA_SMALL_NUMBER)
+	const AZapEmProjectile* const ProjectileDefaults = AZapEmProjectile::StaticClass()->GetDefaultObject<AZapEmProjectile>();
+	if (ProjectileDefaults == nullptr)
+	{
+		return 0.f;
+	}
+
+	const float ProjectileReachDistance = FMath::Max(0.f, ProjectileRangeTrace.Distance);
+	const float InitialAggroRadius = GetProjectileAggroRadius();
+	if (ProjectileReachDistance <= KINDA_SMALL_NUMBER || InitialAggroRadius <= KINDA_SMALL_NUMBER)
 	{
 		return 0.f;
 	}
 
 	const FVector FireDirection = GetProjectileFireDirection();
-	const FVector SegmentStart = AimTrace.SpawnLocation;
-	const FVector SegmentEnd = SegmentStart + FireDirection * ClampedVisibleDistance;
+	const FVector SegmentStart = ProjectileRangeTrace.SpawnLocation;
+	const FVector SegmentEnd = SegmentStart + FireDirection * ProjectileReachDistance;
 	float StrongestPresence = 0.f;
 
 	for (TActorIterator<ADonutFlyerPawn> DonutIt(World); DonutIt; ++DonutIt)
@@ -204,15 +216,19 @@ float AZhoenusPawn::GetAimProjectorTargetPresence(const FProjectileAimTraceResul
 		}
 
 		const float ForwardDistance = FVector::DotProduct(DonutOrigin - SegmentStart, FireDirection);
-		if (ForwardDistance < -DonutRadius || ForwardDistance > ClampedVisibleDistance + DonutRadius)
+		if (ForwardDistance < -DonutRadius || ForwardDistance > ProjectileReachDistance + DonutRadius)
 		{
 			continue;
 		}
 
+		const float ProjectileTravelDistance = FMath::Clamp(ForwardDistance, 0.f, ProjectileReachDistance);
 		const FVector ClosestPoint = FMath::ClosestPointOnSegment(DonutOrigin, SegmentStart, SegmentEnd);
-		const float EffectiveRadius = AggroRadius + DonutRadius;
+		const float AggroRadiusAtClosestPoint = ProjectileDefaults->GetAggroRadiusAtTravelDistance(
+			InitialAggroRadius,
+			ProjectileTravelDistance);
+		const float EffectiveRadius = AggroRadiusAtClosestPoint + DonutRadius;
 		const float DistanceToSegment = FVector::Dist(DonutOrigin, ClosestPoint);
-		if (DistanceToSegment > EffectiveRadius)
+		if (EffectiveRadius <= KINDA_SMALL_NUMBER || DistanceToSegment > EffectiveRadius)
 		{
 			continue;
 		}

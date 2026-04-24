@@ -61,6 +61,11 @@ protected:
 public:
 	AZapEmProjectile();
 
+	float GetConfiguredProjectileSpeed() const;
+	float GetConfiguredProjectileLifetime() const;
+	float GetConfiguredMaxTravelDistance() const;
+	float GetAggroRadiusAtTravelDistance(float StartingAggroRadius, float TravelDistance) const;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Projectile)
 	float AggroRadiusMultiplier{ 12.f };
 

@@ -17,6 +17,12 @@ The reticle should help the player answer three questions immediately:
 If the reticle does not answer those questions well, the ship will feel vague
 even if the underlying flight code is correct.
 
+Range-finding is a core part of that job.
+
+In practice, the reticle should help the player judge not only aim direction,
+but whether a shot fired now has the reach and effective influence to matter
+before the projectile expires.
+
 ## Why It Matters
 
 `Zhoenus` is a 6DOF game with depth, closure, and angle management. That means
