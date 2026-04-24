@@ -21,6 +21,7 @@ UE5 flying-action game project centered on the `SaveThemAll` loop: fly the ship,
 - [Gate clean-save design](Docs/gate-clean-save-design.md)
 - [Reticle principles](Docs/reticle-principles.md)
 - [Level-1 media playback](Docs/level1-media-playback.md)
+- [Level-1 landscape boundary note](Docs/level1-landscape-boundary.md)
 - [SaveThemAll music playback](Docs/save-them-all-music-playback.md)
 - [EAB + qcoin integration plan](Docs/eab-qcoin-integration-plan.md)
 - [Game design concepts](Docs/game-design-concepts.md)
@@ -54,6 +55,7 @@ UE5 flying-action game project centered on the `SaveThemAll` loop: fly the ship,
 - Debug point grants are now available through the shared player-controller console command `GrantPowerPoints <amount>` in non-shipping builds only. It adds directly to `USaveThemAllGameInstance::points`, mirrors the grant into `AcquiredPoints`, and saves immediately so the `PowerUp` screens can be tested without playing a full round.
 - Project source control is intentionally disabled. `Config/DefaultSourceControlSettings.ini` sets `Provider=None`, and the local Mac editor cache mirrors that in `Saved/Config/MacEditor/SourceControlSettings.ini` to avoid Perforce startup noise on this machine.
 - `Level-1` can now randomize in-world movie playback from `Content/Movies` at runtime through `ALevelVideoSurfaceManager`, which is spawned by `ASaveThemAllGameMode`. It swaps tagged or named static-mesh surfaces over to a media-backed material and chooses a random clip on start and after each clip ends.
+- `Level-1` currently allows a player to leave the intended flight space and reach under-landscape space once they get past the terrain edge. Treat that as a containment problem to solve cleanly before layering on more map-specific gameplay assumptions. See `Docs/level1-landscape-boundary.md`.
 - `SaveThemAll` music no longer depends on editing the `LevelSong` MetaSound graph to change the playable set. `ASaveThemAllGameMode` now builds a runtime playlist from configured `/Game/Sound` asset paths plus optional directory scanning, then plays one track for the run and still advances to `PowerUp` when that track ends.
 
 ## Portable Project Copy
