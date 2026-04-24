@@ -295,3 +295,81 @@ Until the full battery/light model exists, the intended design truth should be:
 
 That gives the project a concrete next mechanic and a larger conceptual north
 star at the same time.
+
+## HUD Customization And Visual Flare
+
+The HUD should eventually become player-configurable.
+
+This is not just a comfort feature. Over time, players will want different
+instrument placements, different density preferences, and different visual
+styles depending on:
+
+- platform
+- screen size
+- control method
+- accessibility needs
+- personal taste
+
+So the longer-term direction should be:
+
+- ship one strong default HUD per form factor
+- then allow players to customize that baseline to suit themselves
+
+Recommended customization categories:
+
+- layout:
+  - move certain instruments
+  - choose between approved placement profiles
+  - adjust density / compactness where it does not harm readability
+- presentation:
+  - color themes
+  - material / frame styles
+  - alternate instrument skins
+- emphasis:
+  - choosing which secondary indicators remain visible during flight
+
+Important boundary:
+
+- critical gameplay readability comes first
+- customization should not make the default HUD weaker
+- customization should not compromise core reticle clarity
+- all functional HUD utility should remain available to all players
+
+## HUD Customization As Monetization
+
+HUD personalization is also a plausible monetization lane.
+
+The safest version of that opportunity is cosmetic rather than gameplay-active.
+The project should be strict about that boundary.
+
+Good monetization candidates:
+
+- alternate HUD themes
+- alternate battery / meter frames
+- stylistic reticle skins that preserve gameplay truth
+- premium visual packs for instrument presentation
+
+Bad monetization candidates:
+
+- charging for basic readability
+- selling functional range-finding advantages
+- selling functional HUD instruments or utility layers
+- hiding necessary layout fixes behind purchase gates
+- monetizing access to core accessibility improvements
+
+Design rule:
+
+- monetize expression, never utility
+- gameplay clarity and accessibility must remain part of the base game
+- every player should have access to the full utility of the HUD
+- monetization must not hinder the player or weaken core flight instrumentation
+- monetization should live in optional style, flair, and expression
+
+So the preferred sequence is:
+
+1. make the HUD readable across form factors
+2. make the HUD configurable for player preference
+3. only then consider monetizable cosmetic HUD/style packs
+
+That keeps the business opportunity real without corrupting the game's
+instrument language or trust.
