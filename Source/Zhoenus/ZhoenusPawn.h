@@ -36,7 +36,7 @@ public:
 private:
 	void CreateAimProjector();
 	void UpdateAimProjector(float DeltaSeconds);
-	float GetAimProjectorTargetPresence(const FProjectileAimTraceResult& AimTrace, float VisibleDistance) const;
+	float GetAimProjectorAggroCueStrength(const FProjectileAimTraceResult& ProjectileRangeTrace) const;
 	void UpdateAimProjectorMaterial(float DeltaSeconds, float TargetPresence);
 	void SetAimProjectorVisible(bool bVisible);
 
