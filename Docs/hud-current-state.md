@@ -41,6 +41,7 @@ The Canvas path is the part we can describe precisely from source.
 Current Canvas elements:
 
 - optional screen-space aim triangle
+- reticle-adjacent range readout
 - battery meter with label and percentage readout
 - forward and reverse speed bar
 - thrust / acceleration bar
@@ -102,6 +103,7 @@ instrument panel layout.
 
 The bars read directly from pawn state:
 
+- range readout uses `ASpaceshipPawn::GetProjectileAimTrace().Distance`
 - battery uses `UZhoenusBatteryComponent::GetEnergyFraction()`
 - speed uses `CurrentForwardSpeed`
 - thrust uses `CachedInput.W`
@@ -114,6 +116,14 @@ This is important: most of the HUD reflects current input state, not actual ship
 attitude or world-relative flight state.
 
 ## Current Visual Behavior
+
+### Range Readout
+
+- range readout is a small text label projected near the live aim point
+- it uses the same shared aim trace as the reticle placement path
+- by default it only appears when the aim trace has a blocking hit
+- it currently reports traced distance in meters as a quick readability aid
+- it is not yet a target-presence cue for `DonutFlyers`
 
 ### Battery
 
@@ -194,7 +204,8 @@ clear limitations:
 - the reticle overlay path still exists in code even though world-space reticle is preferred
 - pitch feedback is still input-driven rather than attitude-driven
 - yaw feedback is still input-driven rather than attitude-driven
-- there is no documented mobile-specific HUD adaptation yet
+- the battery meter currently sits in the right-thumb occlusion zone for mobile / touch play
+- there is no mature form-factor-specific HUD layout policy yet
 
 ## Pitch State
 
@@ -235,6 +246,30 @@ It does not yet prove:
 - touch-friendly clarity
 - a polished flight-instrument language
 - cross-platform consistency
+
+### Mobile Occlusion Note
+
+The current battery placement is acceptable on desktop-class screens, but it is
+not acceptable as a final mobile layout.
+
+Current problem:
+
+- the battery meter lives in the lower-right cluster
+- on touch devices that region is likely to sit under the player's right thumb
+- that makes a now-important ship-system indicator hard or impossible to use
+
+This should be treated as a concrete HUD-design issue, not a minor polish nit.
+
+## Form-Factor Guidance
+
+Future HUD work should follow these rules:
+
+- do not place essential readouts under likely thumb-rest or drag regions
+- treat left and right touch-control zones as reserved space on mobile
+- prefer center-top, upper-corner, or other low-occlusion regions for critical status
+- keep one gameplay truth source while allowing different placements by platform
+- test readability separately on desktop-class and touch-class layouts
+- do not assume a HUD position that works on Mac or PC will work on phone
 
 ## Baseline Guidance
 

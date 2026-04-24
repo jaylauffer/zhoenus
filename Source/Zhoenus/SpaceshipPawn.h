@@ -7,6 +7,15 @@
 
 struct FInputActionValue;
 
+struct FProjectileAimTraceResult
+{
+	FVector SpawnLocation = FVector::ZeroVector;
+	FVector TraceEnd = FVector::ZeroVector;
+	FVector AimPoint = FVector::ZeroVector;
+	float Distance = 0.f;
+	bool bHasBlockingHit = false;
+};
+
 UCLASS(Config=Game)
 class ASpaceshipPawn : public APawn
 {
@@ -195,6 +204,7 @@ public:
 
 	FVector GetProjectileSpawnLocation() const;
 	FVector GetProjectileFireDirection() const;
+	FProjectileAimTraceResult GetProjectileAimTrace(float TraceDistance) const;
 	FVector GetProjectileAimPoint(float TraceDistance) const;
 	virtual float GetProjectileAggroRadius() const;
 	class UZhoenusBatteryComponent* GetBatteryComponent() const { return BatteryComponent; }

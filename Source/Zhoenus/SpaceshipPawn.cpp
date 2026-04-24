@@ -379,10 +379,12 @@ FVector ASpaceshipPawn::GetProjectileFireDirection() const
 	return GetActorForwardVector().GetSafeNormal();
 }
 
-FVector ASpaceshipPawn::GetProjectileAimPoint(const float TraceDistance) const
+FProjectileAimTraceResult ASpaceshipPawn::GetProjectileAimTrace(const float TraceDistance) const
 {
-	const FVector SpawnLocation = GetProjectileSpawnLocation();
-	const FVector TraceEnd = SpawnLocation + GetProjectileFireDirection() * FMath::Max(0.f, TraceDistance);
+	FProjectileAimTraceResult Result;
+	Result.SpawnLocation = GetProjectileSpawnLocation();
+	Result.TraceEnd = Result.SpawnLocation + GetProjectileFireDirection() * FMath::Max(0.f, TraceDistance);
+	Result.AimPoint = Result.TraceEnd;
 
 	if (UWorld* World = GetWorld())
 	{
@@ -403,13 +405,20 @@ FVector ASpaceshipPawn::GetProjectileAimPoint(const float TraceDistance) const
 				QueryParams.AddIgnoredActor(*ProjectileIt);
 			}
 		}
-		if (World->LineTraceSingleByChannel(Hit, SpawnLocation, TraceEnd, ECC_Visibility, QueryParams))
+		if (World->LineTraceSingleByChannel(Hit, Result.SpawnLocation, Result.TraceEnd, ECC_Visibility, QueryParams))
 		{
-			return Hit.ImpactPoint;
+			Result.AimPoint = Hit.ImpactPoint;
+			Result.bHasBlockingHit = true;
 		}
 	}
 
-	return TraceEnd;
+	Result.Distance = FVector::Dist(Result.SpawnLocation, Result.AimPoint);
+	return Result;
+}
+
+FVector ASpaceshipPawn::GetProjectileAimPoint(const float TraceDistance) const
+{
+	return GetProjectileAimTrace(TraceDistance).AimPoint;
 }
 
 float ASpaceshipPawn::GetProjectileAggroRadius() const
