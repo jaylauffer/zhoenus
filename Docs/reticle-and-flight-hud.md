@@ -4,6 +4,9 @@
 
 This document describes the last known good reticle state after the reset.
 
+This file is about current runtime behavior.
+For the design purpose of the reticle, read `Docs/reticle-principles.md` first.
+
 The active aiming aid is a world-space reticle owned by `AZhoenusPawn`.
 It is not the old HUD `+` overlay. The reticle is placed in the scene on the
 projected shot path so the ship and level geometry can naturally clip it from
@@ -15,8 +18,9 @@ The current runtime path is:
 - `ASpaceshipPawn::GetProjectileFireDirection()` returns the live forward shot direction
 - `ASpaceshipPawn::GetProjectileAimTrace()` is now the shared trace-result helper and returns spawn location, aim point, hit state, and traced distance
 - `ASpaceshipPawn::GetProjectileAimPoint()` now delegates to that shared trace-result helper for compatibility
-- `AZhoenusPawn::UpdateAimProjector()` places the reticle from that shared trace result, clamps it by config distance, keeps a minimum forward standoff from the muzzle, and only then applies the depth-bias pullback
+- `AZhoenusPawn::UpdateAimProjector()` places the reticle from that shared trace result, clamps it by config distance, and then applies the depth-bias pullback
 - `AZhoenusPawn::CreateAimProjector()` configures a `UMaterialBillboardComponent` using `/Game/Textures/M_AimProjector`
+- `AZhoenusPawn::UpdateAimProjectorMaterial()` now drives the reticle material's `Tint` and `DetectedTarget` parameters through a dynamic material instance
 - the legacy HUD overlay path in `ASpaceshipHUD` now also uses that same shared trace result instead of re-running its own aim math
 - `ASpaceshipHUD` can now draw a small range readout from that same shared trace result without re-enabling the old HUD triangle overlay
 
@@ -40,10 +44,12 @@ Current values:
 - `AimProjectorMaterialPath=/Game/Textures/M_AimProjector.M_AimProjector`
 - `AimProjectorTraceDistance=5000.0`
 - `AimProjectorMaxVisibleDistance=3200.0`
-- `AimProjectorMinVisibleDistance=160.0`
 - `AimProjectorDepthBias=48.0`
 - `AimProjectorScale=252.0`
 - `AimProjectorAggroRadiusScale=0.5`
+- `AimProjectorIdleTint=(R=0.68,G=1.0,B=0.2,A=0.92)`
+- `AimProjectorDetectedTargetTint=(R=1.0,G=0.18,B=0.08,A=0.95)`
+- `AimProjectorDetectedTargetBlendSpeed=8.0`
 
 The legacy HUD reticle still exists in `ASpaceshipHUD`, but it is disabled by
 config:
@@ -132,8 +138,24 @@ The desired richer feedback is still different:
 - when a `DonutFlyer` is effectively "in range" of the reticle / projectile influence space,
   the reticle should be able to shift from green toward red
 
-That future target-feedback cue should be treated as a follow-up layer, not mixed
-into the baseline range-readout pass.
+That first target-feedback layer is now live:
+
+- `AZhoenusPawn` creates a dynamic instance of `/Game/Textures/M_AimProjector`
+- it drives the material's `Tint` and `DetectedTarget` parameters every tick
+- the cue uses the same player-shot space as gameplay:
+  - the muzzle-to-reticle segment
+  - the same `GetProjectileAggroRadius()` value that player projectiles inherit
+- each `DonutFlyer` is tested against that segment using its current bounds radius
+- the strongest intersecting flyer pushes the reticle toward the configured detected tint
+- smoothing is handled with `AimProjectorDetectedTargetBlendSpeed` so the cue does not hard-pop on and off
+
+Important boundary:
+
+- this is a gameplay-space cue, not a pure screen-space silhouette test
+- it answers "would a player-fired projectile's current near-miss envelope plausibly catch a flyer in this reticle space?"
+- it does not yet mean "the visible sprite overlap on screen is exact to the pixel"
+
+The range readout remains separate from that cue.
 
 ## Design Goals
 
@@ -154,7 +176,7 @@ The reticle is correct when all of these are true:
 - it is visible in front of the ship during normal flight
 - it sits on the live shot path, not an arbitrary camera ray
 - it does not overlap the ship like a HUD sticker
-- it hides instead of collapsing back onto the muzzle when the trace is too close to satisfy the forward standoff
+- it stays meaningfully forward of the muzzle during normal flight instead of collapsing into the ship
 - the ship can partially or fully occlude it
 - it remains legible without dominating the frame
 - it behaves consistently while flying and firing

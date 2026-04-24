@@ -9,10 +9,12 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/InputComponent.h"
 #include "Components/SpotLightComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
 #include "Materials/MaterialInterface.h"
+#include "EngineUtils.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
@@ -23,6 +25,12 @@
 #include "Widgets/Input/SVirtualJoystick.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogZhoenusPawn, Log, All);
+
+namespace
+{
+	const FName AimProjectorTintParameterName(TEXT("Tint"));
+	const FName AimProjectorDetectedTargetParameterName(TEXT("DetectedTarget"));
+}
 
 
 
@@ -91,13 +99,13 @@ void AZhoenusPawn::BeginPlay()
 	LeftThruster = UNiagaraFunctionLibrary::SpawnSystemAttached(NS, RootComponent, NAME_None, FVector(-69.7f, -31.2f, 12.f), FRotator(0.f, 0.f, 0.f), FVector(.068f, .068f, .068f), EAttachLocation::KeepRelativeOffset, true, ENCPoolMethod::None);
 	RightThruster = UNiagaraFunctionLibrary::SpawnSystemAttached(NS, RootComponent, NAME_None, FVector(-69.7f, 31.2f, 12.f), FRotator(0.f, 0.f, 0.f), FVector(.068f, .068f, .068f), EAttachLocation::KeepRelativeOffset, true, ENCPoolMethod::None);
 	CreateAimProjector();
-	UpdateAimProjector();
+	UpdateAimProjector(0.f);
 }
 
 void AZhoenusPawn::Tick(const float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	UpdateAimProjector();
+	UpdateAimProjector(DeltaSeconds);
 }
 
 void AZhoenusPawn::CreateAimProjector()
@@ -114,15 +122,29 @@ void AZhoenusPawn::CreateAimProjector()
 		return;
 	}
 
+	AimProjectorMaterialInstance = UMaterialInstanceDynamic::Create(ReticleMaterial, this);
+	if (AimProjectorMaterialInstance != nullptr)
+	{
+		AimProjectorMaterialInstance->SetVectorParameterValue(AimProjectorTintParameterName, AimProjectorIdleTint);
+		AimProjectorMaterialInstance->SetScalarParameterValue(AimProjectorDetectedTargetParameterName, 0.f);
+	}
+
 	AimProjectorComponent->SetElements({});
-	AimProjectorComponent->AddElement(ReticleMaterial, nullptr, false, AimProjectorScale, AimProjectorScale, nullptr);
+	AimProjectorComponent->AddElement(
+		AimProjectorMaterialInstance != nullptr ? AimProjectorMaterialInstance : ReticleMaterial,
+		nullptr,
+		false,
+		AimProjectorScale,
+		AimProjectorScale,
+		nullptr);
 	AimProjectorComponent->SetVisibility(false, true);
 }
 
-void AZhoenusPawn::UpdateAimProjector()
+void AZhoenusPawn::UpdateAimProjector(const float DeltaSeconds)
 {
 	if (!bEnableAimProjector || AimProjectorComponent == nullptr)
 	{
+		AimProjectorDetectedTargetState = 0.f;
 		SetAimProjectorVisible(false);
 		return;
 	}
@@ -131,14 +153,96 @@ void AZhoenusPawn::UpdateAimProjector()
 	const FProjectileAimTraceResult AimTrace = GetProjectileAimTrace(AimProjectorTraceDistance);
 	const float VisibleDistance = FMath::Min(AimTrace.Distance, AimProjectorMaxVisibleDistance);
 	const FVector AimPoint = AimTrace.SpawnLocation + FireDirection * VisibleDistance - FireDirection * AimProjectorDepthBias;
+	const float TargetPresence = GetAimProjectorTargetPresence(AimTrace, VisibleDistance);
 
 	AimProjectorComponent->SetWorldLocation(AimPoint);
 	AimProjectorComponent->SetVisibility(true, true);
+	UpdateAimProjectorMaterial(DeltaSeconds, TargetPresence);
 }
 
 float AZhoenusPawn::GetProjectileAggroRadius() const
 {
 	return FMath::Max(0.f, AimProjectorScale * AimProjectorAggroRadiusScale);
+}
+
+float AZhoenusPawn::GetAimProjectorTargetPresence(const FProjectileAimTraceResult& AimTrace, const float VisibleDistance) const
+{
+	UWorld* const World = GetWorld();
+	if (World == nullptr)
+	{
+		return 0.f;
+	}
+
+	const float ClampedVisibleDistance = FMath::Max(0.f, VisibleDistance);
+	const float AggroRadius = GetProjectileAggroRadius();
+	if (ClampedVisibleDistance <= KINDA_SMALL_NUMBER || AggroRadius <= KINDA_SMALL_NUMBER)
+	{
+		return 0.f;
+	}
+
+	const FVector FireDirection = GetProjectileFireDirection();
+	const FVector SegmentStart = AimTrace.SpawnLocation;
+	const FVector SegmentEnd = SegmentStart + FireDirection * ClampedVisibleDistance;
+	float StrongestPresence = 0.f;
+
+	for (TActorIterator<ADonutFlyerPawn> DonutIt(World); DonutIt; ++DonutIt)
+	{
+		ADonutFlyerPawn* const Donut = *DonutIt;
+		if (!IsValid(Donut))
+		{
+			continue;
+		}
+
+		FVector DonutOrigin = FVector::ZeroVector;
+		FVector DonutExtent = FVector::ZeroVector;
+		Donut->GetActorBounds(false, DonutOrigin, DonutExtent);
+
+		float DonutRadius = Donut->GetSimpleCollisionRadius();
+		if (DonutRadius <= KINDA_SMALL_NUMBER)
+		{
+			DonutRadius = DonutExtent.GetMax();
+		}
+
+		const float ForwardDistance = FVector::DotProduct(DonutOrigin - SegmentStart, FireDirection);
+		if (ForwardDistance < -DonutRadius || ForwardDistance > ClampedVisibleDistance + DonutRadius)
+		{
+			continue;
+		}
+
+		const FVector ClosestPoint = FMath::ClosestPointOnSegment(DonutOrigin, SegmentStart, SegmentEnd);
+		const float EffectiveRadius = AggroRadius + DonutRadius;
+		const float DistanceToSegment = FVector::Dist(DonutOrigin, ClosestPoint);
+		if (DistanceToSegment > EffectiveRadius)
+		{
+			continue;
+		}
+
+		const float Presence = 1.f - FMath::Clamp(DistanceToSegment / EffectiveRadius, 0.f, 1.f);
+		StrongestPresence = FMath::Max(StrongestPresence, Presence);
+	}
+
+	return StrongestPresence;
+}
+
+void AZhoenusPawn::UpdateAimProjectorMaterial(const float DeltaSeconds, const float TargetPresence)
+{
+	if (AimProjectorMaterialInstance == nullptr)
+	{
+		return;
+	}
+
+	const float BlendSpeed = FMath::Max(0.f, AimProjectorDetectedTargetBlendSpeed);
+	AimProjectorDetectedTargetState = BlendSpeed > 0.f
+		? FMath::FInterpTo(AimProjectorDetectedTargetState, TargetPresence, DeltaSeconds, BlendSpeed)
+		: TargetPresence;
+
+	const FLinearColor ActiveTint = FLinearColor::LerpUsingHSV(
+		AimProjectorIdleTint,
+		AimProjectorDetectedTargetTint,
+		AimProjectorDetectedTargetState);
+
+	AimProjectorMaterialInstance->SetVectorParameterValue(AimProjectorTintParameterName, ActiveTint);
+	AimProjectorMaterialInstance->SetScalarParameterValue(AimProjectorDetectedTargetParameterName, AimProjectorDetectedTargetState);
 }
 
 void AZhoenusPawn::SetAimProjectorVisible(const bool bVisible)

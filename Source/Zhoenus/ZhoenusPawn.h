@@ -35,11 +35,16 @@ public:
 	virtual float GetProjectileAggroRadius() const override;
 private:
 	void CreateAimProjector();
-	void UpdateAimProjector();
+	void UpdateAimProjector(float DeltaSeconds);
+	float GetAimProjectorTargetPresence(const FProjectileAimTraceResult& AimTrace, float VisibleDistance) const;
+	void UpdateAimProjectorMaterial(float DeltaSeconds, float TargetPresence);
 	void SetAimProjectorVisible(bool bVisible);
 
 	UPROPERTY(Category = Reticle, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UMaterialBillboardComponent> AimProjectorComponent;
+
+	UPROPERTY(Transient)
+	TObjectPtr<class UMaterialInstanceDynamic> AimProjectorMaterialInstance;
 
 	UPROPERTY(Config, EditAnywhere, Category = "Reticle")
 	bool bEnableAimProjector = true;
@@ -61,6 +66,17 @@ private:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Reticle", meta = (ClampMin = "0.05"))
 	float AimProjectorAggroRadiusScale = 0.5f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Reticle")
+	FLinearColor AimProjectorIdleTint = FLinearColor(0.68f, 1.f, 0.2f, 0.92f);
+
+	UPROPERTY(Config, EditAnywhere, Category = "Reticle")
+	FLinearColor AimProjectorDetectedTargetTint = FLinearColor(1.f, 0.18f, 0.08f, 0.95f);
+
+	UPROPERTY(Config, EditAnywhere, Category = "Reticle", meta = (ClampMin = "0.0"))
+	float AimProjectorDetectedTargetBlendSpeed = 8.f;
+
+	float AimProjectorDetectedTargetState = 0.f;
 
 public:
 	/** Returns PlaneMesh subobject **/

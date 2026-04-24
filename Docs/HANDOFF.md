@@ -6,6 +6,7 @@ AdjustShipUI label restoration via blueprint path (no gameplay changes)
 ### Required Reading
 - `Docs/gamepad-controls-analysis.md` (controls and state transitions)
 - `Docs/point-system-and-convert.md` (stat labels and UI alignment)
+- `Docs/reticle-principles.md` (reticle purpose before reticle implementation work)
 - `Docs/lobby-music-design.md` (menu-context music ownership and behavior)
 - `Source/Zhoenus/AdjustShipUI.cpp`, `PowerUpStatWidgetUI.cpp` (label restoration logic)
 
