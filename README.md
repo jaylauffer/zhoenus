@@ -19,6 +19,7 @@ UE5 flying-action game project centered on the `SaveThemAll` loop: fly the ship,
 - [Donut flyer aggro design](Docs/donutflyer-aggro-design.md)
 - [Donut flyer goal-lock analysis](Docs/donutflyer-goal-lock-analysis.md)
 - [Gate clean-save design](Docs/gate-clean-save-design.md)
+- [Reticle principles](Docs/reticle-principles.md)
 - [Level-1 media playback](Docs/level1-media-playback.md)
 - [SaveThemAll music playback](Docs/save-them-all-music-playback.md)
 - [EAB + qcoin integration plan](Docs/eab-qcoin-integration-plan.md)
