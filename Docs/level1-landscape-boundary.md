@@ -4,12 +4,12 @@ Date: 2026-04-25
 
 ## Purpose
 
-Document the current `Level-1` landscape-containment problem before choosing a
-fix.
+Document the current `Level-1` landscape-edge problem and the agreed first
+implementation direction.
 
-This note is about the present gameplay situation and the evidence currently
-available from source and map inspection. It is not yet a decision document for
-which containment approach should ship.
+This note started as a pure diagnosis pass. It now also records the user-facing
+constraints that came out of follow-up discussion so later work does not drift
+back toward blocker walls, runtime recovery rules, or oversized terrain scope.
 
 ## Gameplay Behavior Under Discussion
 
@@ -26,7 +26,7 @@ The current problem is that the landscape ends, and the player can fly past that
 edge and then travel underneath the landscape.
 
 That means the map currently allows the player to leave the intended flight
-space without a clean reject, recovery, or reset.
+space by reaching a terrain seam and then traveling underneath the landscape.
 
 ## Reviewed Context
 
@@ -159,44 +159,85 @@ So the failure mode is:
 - It weakens confidence in the level boundary in the same way that trap pockets
   weaken the Gate of Oblivion: the space stops reading as trustworthy.
 
-## Containment Guardrail
+## Discussion Outcome
 
-The future `Level-1` boundary should either:
+Follow-up discussion narrowed the boundary expectations for `Level-1`:
 
-- reject the player
-- deflect the player
-- recover / reset the player
+- the whole `Level-1` map is intended to be playable space
+- players should remain effectively unbounded in the air
+- perimeter blocker rings are a poor fit because they change the flight feel
+- mobile support matters, so simply covering a huge "planet" with expensive
+  landscape is also a poor fit
 
-It should not silently admit the ship into under-landscape space.
+The current chosen direction is:
 
-## Open Questions Before Implementation
+- extend the reachable terrain outward with flat, low-cost landscape
+- keep that extension visually and technically cheap compared to the authored
+  core of the map
+- use that outer band to move the hard terrain edge farther away from normal
+  play rather than boxing the player in with side blockers
 
-- Is the right fix map-authored containment, runtime recovery, or both?
-- Is underside access limited to one seam, or is it available across a large
-  perimeter of the landscape?
-- Does this escape path affect only the player, or can `DonutFlyers` also enter
-  invalid space around or below the terrain?
-- Does the eventual solution need only collision containment, or does the
-  landscape edge itself also need a readability / art treatment?
-- Is there any intentionally valid off-landscape flight space that a hard
-  invisible wall would block incorrectly?
+This is intentionally different from:
 
-## Recommended Next Validation
+- a hard perimeter `BlockingVolume` solution
+- a terrain-aware runtime recovery rule based on "below terrain at this XY"
+- a full high-detail landscape expansion around the entire map
 
-1. Open `Level-1` in the editor and inspect the exact route(s) that allow
-   under-landscape flight.
-2. Confirm the map's actual World Settings for any `KillZ` or world-bounds
-   behavior.
-3. Decide whether the preferred gameplay outcome is:
-   - physical rejection
-   - soft recovery
-   - hard reset / fail state
-4. Validate the chosen direction against the 6DOF save loop so containment does
-   not make normal flight feel arbitrary or cramped.
+## Design Guardrails
+
+The current doc set should assume the following unless the task changes again:
+
+- the first iteration is a map-side landscape expansion task, not a pawn
+  movement rewrite
+- the added terrain should be mostly flat and low cost
+- the extension should cover the reachable seam, not try to build a literal
+  full planet
+- the fix should preserve the open 6DOF feel instead of creating side-wall
+  behavior
+- mobile targets matter, so the outer band should stay cheaper than the
+  authored gameplay core
+
+## Open Implementation Questions
+
+- Which edge or edges of the current landscape are actually reachable in normal
+  play and should be extended first?
+- How wide does the first flat outer band need to be to make the current seam
+  effectively unreachable during a normal run?
+- Can the outer band reuse the current landscape material as-is, or does it
+  need a simpler treatment for mobile cost?
+- Which visual or gameplay details should remain confined to the authored core
+  so the extension stays cheap?
+
+## Recommended Next Work
+
+1. Open `Level-1` in the editor and inspect the exact reachable seam route or
+   routes.
+2. Inspect the current landscape layout and determine the smallest practical
+   flat extension pattern.
+3. Add a conservative first outer band around the reachable edge instead of a
+   full all-direction expansion.
+4. Validate that normal 6DOF play, flyer gathering, goal saving, and the
+   song-ended transition still behave the same after the map change.
+
+## Current Implementation Direction
+
+The first iteration should aim for a practical mobile-safe terrain extension:
+
+- add only the extra landscape needed to push the reachable seam away from
+  normal runs
+- keep the outer terrain mostly flat and cheap
+- avoid adding dense sculpt detail, gameplay clutter, or heavy material cost in
+  that outer band
+- treat the existing authored play zone as the high-value gameplay core
+
+Because the project targets `iOS` and `Android`, this extension should stay
+conservative. The goal is not to make an enormous world. The goal is to make
+the current landscape edge effectively unreachable during normal play without
+damaging the open 6DOF feel.
 
 ## Scope Of This Pass
 
-This pass documents the issue only.
+This pass documents the issue and the agreed direction only.
 
 No runtime behavior, map assets, collision setup, or player-movement code were
 changed.

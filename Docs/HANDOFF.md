@@ -1,21 +1,34 @@
-**Zhoenus Handoff - 2026-04-05**
+**Zhoenus Handoff - 2026-04-25**
 
 ### Current Repair
-AdjustShipUI label restoration via blueprint path (no gameplay changes)
+Level-1 landscape boundary documentation and first-pass terrain-extension
+planning
 
 ### Required Reading
-- `Docs/gamepad-controls-analysis.md` (controls and state transitions)
-- `Docs/point-system-and-convert.md` (stat labels and UI alignment)
-- `Docs/reticle-principles.md` (reticle purpose before reticle implementation work)
-- `Docs/lobby-music-design.md` (menu-context music ownership and behavior)
-- `Source/Zhoenus/AdjustShipUI.cpp`, `PowerUpStatWidgetUI.cpp` (label restoration logic)
+- `README.md` (repo state and current follow-ups)
+- `Docs/AGENT_BOOTSTRAP.md` (gameplay and workflow guardrails)
+- `Docs/ACTIVE_TASK.md` (active Level-1 boundary priority)
+- `Docs/level1-landscape-boundary.md` (current problem statement and chosen
+  direction)
+- `Docs/level1-media-playback.md` (other `Level-1` runtime ownership that
+  should not be broken by map work)
+- `Source/Zhoenus/SpaceshipPawn.cpp` (current 6DOF movement and collision
+  behavior)
+- `Source/Zhoenus/SaveThemAllGameMode.cpp` (song-ended run completion and map
+  transition behavior)
+- `Source/Zhoenus/DonutFlyerSpawner.cpp` (current landscape-above-ground rule
+  for flyer spawning)
+- `Content/Map/Level-1.umap` (landscape layout and reachable seam)
 
 ### Current Focus
-- Reticle Refinement: Ensure visual feedback supports 6DOF flight and goal alignment
-- HUD Form-Factor Rules: Keep critical instruments out of thumb-occlusion zones and stop treating desktop placement as automatically valid on mobile. Battery now has a desktop/mobile profile split; the rest of the HUD still needs that treatment.
-- HUD Personalization Direction: Long-term HUD customization and cosmetic theme packs are a valid product direction, but readability/accessibility must land first. Monetize expression, never utility. All HUD utility must remain available to all players, and monetization should stay cosmetic
-- Menu Contrast Accessibility: Improve `PowerUp`, `Convert`, and `AdjustShip` contrast so the menus are easier to read for more players, but keep this below reticle work in priority
-- Button Highlight Usability: Improve visibility on Startup/AdjustShipUI screens without distracting from flight mechanics
+- Level-1 Boundary: Extend the reachable `Level-1` landscape outward with flat,
+  low-cost terrain so the current seam is not reachable during normal play.
+- Flight Feel Protection: Do not solve this with perimeter blocker walls that
+  make the open 6DOF space feel boxed in.
+- Mobile Cost Guardrail: Keep the added outer band materially cheaper than the
+  authored gameplay core so the map remains plausible for `iOS` and `Android`.
+- Loop Preservation: Do not damage flyer gathering, goal saving, HUD
+  readability, or the song-ended transition to `PowerUp.umap`.
 - Music Routing: Keep gameplay tracks and menu tracks separate so menu screens
   use lobby music while `Level-1` keeps the run-ending gameplay playlist model
 
@@ -47,6 +60,11 @@ AdjustShipUI label restoration via blueprint path (no gameplay changes)
 | `Startup.umap` | (Exit)         | "Enough" button clicked         | Close app, no further UI interaction   |
 
 ### Validation Criteria
+- Confirm the reachable terrain seam is pushed far enough away that under-
+  landscape flight is no longer part of normal play
+- Ensure the outer terrain band stays flat and low cost rather than turning
+  Level-1 into a giant detailed landscape
+- Verify no new blocker-wall feel is introduced into normal flight
 - Confirm song-ending condition triggers transition to PowerUp.umap
 - Ensure "Again" and "Back" buttons drive correct state transitions
 - Verify no UI elements interfere with flight mechanics in Level-1.umap
