@@ -62,6 +62,14 @@ Current curated active lobby asset:
 
 - `/Game/Sound/Lobby/LobbySong.LobbySong`
 
+Packaging note:
+
+- lobby music is resolved at runtime, so cooked builds must include
+  `/Game/Sound/Lobby`
+- the project now also keeps a bundled `LobbySong` fallback in
+  `AZhoenusLobbyGameMode` so device builds do not depend solely on a config
+  string resolving at runtime
+
 ## Current behavior target
 
 While the player is in lobby context:

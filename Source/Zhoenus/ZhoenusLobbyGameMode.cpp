@@ -8,6 +8,7 @@
 #include "Math/UnrealMathUtility.h"
 #include "Sound/SoundBase.h"
 #include "TimerManager.h"
+#include "UObject/ConstructorHelpers.h"
 #include "UObject/SoftObjectPath.h"
 #include "ZhoenusLobbyPlayerController.h"
 
@@ -15,6 +16,14 @@ DEFINE_LOG_CATEGORY_STATIC(LogZhoenusLobbyGameMode, Log, All);
 
 AZhoenusLobbyGameMode::AZhoenusLobbyGameMode()
 {
+	{
+		static ConstructorHelpers::FObjectFinder<USoundBase> LobbySong(TEXT("/Game/Sound/Lobby/LobbySong.LobbySong"));
+		if (LobbySong.Object != nullptr)
+		{
+			LobbyMusicFallbackSound = LobbySong.Object;
+		}
+	}
+
 	PlayerControllerClass = AZhoenusLobbyPlayerController::StaticClass();
 	DefaultPawnClass = nullptr;
 	HUDClass = nullptr;
@@ -39,18 +48,24 @@ void AZhoenusLobbyGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 USoundBase* AZhoenusLobbyGameMode::ResolveLobbyMusic()
 {
-	if (LobbyMusicPath.IsEmpty())
-	{
-		return nullptr;
-	}
-
 	if (IsValid(LobbyMusicSound))
 	{
 		return LobbyMusicSound;
 	}
 
-	const FSoftObjectPath LobbyMusicAssetPath(LobbyMusicPath);
-	LobbyMusicSound = Cast<USoundBase>(LobbyMusicAssetPath.TryLoad());
+	if (!LobbyMusicPath.IsEmpty())
+	{
+		const FSoftObjectPath LobbyMusicAssetPath(LobbyMusicPath);
+		LobbyMusicSound = Cast<USoundBase>(LobbyMusicAssetPath.TryLoad());
+		if (IsValid(LobbyMusicSound))
+		{
+			return LobbyMusicSound;
+		}
+
+		UE_LOG(LogZhoenusLobbyGameMode, Warning, TEXT("Lobby music path %s could not be resolved. Falling back to bundled lobby track."), *LobbyMusicPath);
+	}
+
+	LobbyMusicSound = LobbyMusicFallbackSound;
 	return LobbyMusicSound;
 }
 
@@ -68,7 +83,7 @@ void AZhoenusLobbyGameMode::StartLobbyMusic()
 	USoundBase* LobbySound = ResolveLobbyMusic();
 	if (LobbySound == nullptr)
 	{
-		UE_LOG(LogZhoenusLobbyGameMode, Warning, TEXT("Lobby music path %s could not be resolved."), *LobbyMusicPath);
+		UE_LOG(LogZhoenusLobbyGameMode, Warning, TEXT("Lobby music could not be resolved from %s or the bundled fallback."), *LobbyMusicPath);
 		return;
 	}
 

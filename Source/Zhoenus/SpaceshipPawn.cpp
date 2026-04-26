@@ -12,6 +12,7 @@
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
 #include "EngineUtils.h"
+#include "PlanetBody.h"
 #include "Sound/SoundBase.h"
 #include "DrawDebugHelpers.h"
 #include "TimerManager.h"
@@ -34,6 +35,14 @@ DEFINE_LOG_CATEGORY_STATIC(LogSpaceshipPawn, Log, All);
 #else
 #define ScreenDebug2(text) 
 #endif
+
+namespace
+{
+	float GetSignedMotionAlongPlanetNormal(const ASpaceshipPawn& Pawn, const FVector& SurfaceNormal)
+	{
+		return FVector::DotProduct(Pawn.GetActorForwardVector() * Pawn.CurrentForwardSpeed, SurfaceNormal);
+	}
+}
 
 ASpaceshipPawn::ASpaceshipPawn(const FObjectInitializer &initializer)
 {
@@ -118,12 +127,16 @@ void ASpaceshipPawn::BeginPlay()
 			Subsystem->AddMappingContext(ShipInputMappingContext, 0);
 		}
 	}
+
+	RefreshActivePlanetBody(true);
 }
 
 void ASpaceshipPawn::Tick(float DeltaSeconds)
 {
 	// Call any parent class Tick implementation
 	Super::Tick(DeltaSeconds);
+
+	EnforcePlanetGuardrail();
     
     // Sticky mouse decay (only for look axes)
     if (LastInputSource == EInputSource::Mouse && MouseStickDecay > 0.f)
@@ -143,6 +156,7 @@ void ASpaceshipPawn::Tick(float DeltaSeconds)
 
         // Move plane forwards (with sweep so we stop when we collide with things)
         AddActorLocalOffset(LocalMove, true);
+	EnforcePlanetGuardrail();
 
         // Calculate change in rotation this frame
         double& Pitch{ CachedInput.X };
@@ -167,6 +181,80 @@ void ASpaceshipPawn::Tick(float DeltaSeconds)
         DeltaRotation.Roll = CurrentRollSpeed * DeltaSeconds;
         AddActorLocalRotation(DeltaRotation.Quaternion());
         FireShot();
+}
+
+void ASpaceshipPawn::RefreshActivePlanetBody(const bool bForceRefresh)
+{
+	UWorld* const World = GetWorld();
+	if (World == nullptr)
+	{
+		return;
+	}
+
+	const float NowSeconds = World->GetTimeSeconds();
+	if (!bForceRefresh && ActivePlanetBody.IsValid() && NextPlanetBodyRefreshTime > NowSeconds)
+	{
+		return;
+	}
+
+	APlanetBody* BestPlanetBody = nullptr;
+	float BestScore = TNumericLimits<float>::Max();
+
+	for (TActorIterator<APlanetBody> PlanetIt(World); PlanetIt; ++PlanetIt)
+	{
+		APlanetBody* const Candidate = *PlanetIt;
+		if (!IsValid(Candidate) || !Candidate->HasPlanetFrame())
+		{
+			continue;
+		}
+
+		const float CandidateScore = Candidate->GetSurfaceDistanceScore(GetActorLocation());
+		if (CandidateScore < BestScore)
+		{
+			BestScore = CandidateScore;
+			BestPlanetBody = Candidate;
+		}
+	}
+
+	ActivePlanetBody = BestPlanetBody;
+	NextPlanetBodyRefreshTime = NowSeconds + 0.25f;
+}
+
+void ASpaceshipPawn::EnforcePlanetGuardrail()
+{
+	RefreshActivePlanetBody();
+
+	APlanetBody* const PlanetRuntime = ActivePlanetBody.Get();
+	if (!IsValid(PlanetRuntime) || !PlanetRuntime->ShouldEnforceGuardrailAt(GetActorLocation()))
+	{
+		return;
+	}
+
+	const FVector PlanetCenter = PlanetRuntime->GetPlanetCenter();
+	const float GuardrailRadius = PlanetRuntime->GetGuardrailRadius();
+	const FVector FromCenter = GetActorLocation() - PlanetCenter;
+	const float DistanceSquared = FromCenter.SizeSquared();
+	if (DistanceSquared >= FMath::Square(GuardrailRadius))
+	{
+		return;
+	}
+
+	FVector SurfaceNormal = DistanceSquared > KINDA_SMALL_NUMBER
+		? FromCenter / FMath::Sqrt(DistanceSquared)
+		: FVector::UpVector;
+	if (!SurfaceNormal.Normalize())
+	{
+		SurfaceNormal = FVector::UpVector;
+	}
+
+	const FVector SafeLocation = PlanetCenter + SurfaceNormal * GuardrailRadius;
+	SetActorLocation(SafeLocation, false, nullptr, ETeleportType::TeleportPhysics);
+
+	if (GetSignedMotionAlongPlanetNormal(*this, SurfaceNormal) < 0.f)
+	{
+		CurrentForwardSpeed = 0.f;
+		CurrentAcceleration = 0.f;
+	}
 }
 
 void ASpaceshipPawn::NotifyHit(class UPrimitiveComponent* MyComp, class AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)

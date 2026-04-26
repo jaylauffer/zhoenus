@@ -11,6 +11,8 @@
 #include "DonutFlyerSpawner.h"
 #include "Goal.h"
 #include "LevelVideoSurfaceManager.h"
+#include "PlanetBody.h"
+#include "PlanetSurfaceRuntime.h"
 #include "SpaceshipHUD.h"
 #include "EngineUtils.h"
 #include "Math/UnrealMathUtility.h"
@@ -78,6 +80,18 @@ void ASaveThemAllGameMode::BeginPlay()
 	if (w)
 	{
 		LevelVideoSurfaceManager = w->SpawnActor<ALevelVideoSurfaceManager>();
+		if (bEnablePlanetBoundary)
+		{
+			PlanetBody = w->SpawnActor<APlanetBody>();
+		}
+		if (bEnablePlanetSurfaceRuntime)
+		{
+			PlanetSurfaceRuntime = w->SpawnActor<APlanetSurfaceRuntime>();
+			if (PlanetSurfaceRuntime != nullptr)
+			{
+				PlanetSurfaceRuntime->SetPlanetBody(PlanetBody);
+			}
+		}
 	}
 }
 

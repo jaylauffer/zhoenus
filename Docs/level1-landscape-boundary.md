@@ -1,243 +1,149 @@
-# Level-1 Landscape Boundary Note
+# Level-1 Planet Boundary Note
 
-Date: 2026-04-25
+Date: 2026-04-26
 
 ## Purpose
 
-Document the current `Level-1` landscape-edge problem and the agreed first
-implementation direction.
-
-This note started as a pure diagnosis pass. It now also records the user-facing
-constraints that came out of follow-up discussion so later work does not drift
-back toward blocker walls, runtime recovery rules, or oversized terrain scope.
+Document the current `Level-1` outer-world model in a way that stays simple and
+playable across console/desktop, tablet, `iOS`, and `Android`.
 
 ## Gameplay Behavior Under Discussion
 
-`Level-1` is the live `SaveThemAll` gameplay map.
-
-The intended loop is:
+`Level-1` is the live `SaveThemAll` map:
 
 - fly the ship in readable 6DOF space
 - gather `DonutFlyers`
 - shepherd them through the goal
 - finish the run when the gameplay song ends
 
-The current problem is that the landscape ends, and the player can fly past that
-edge and then travel underneath the landscape.
+The original boundary failure was that the player could leave the authored
+landscape and travel underneath the map.
 
-That means the map currently allows the player to leave the intended flight
-space by reaching a terrain seam and then traveling underneath the landscape.
+## What Changed
 
-## Reviewed Context
+The project is no longer treating this as “keep growing the baked landscape.”
 
-Docs reviewed for this note:
+It is also no longer treating the procedural outer surface as the authority.
 
-- `README.md`
-- `Docs/AGENT_BOOTSTRAP.md`
-- `Docs/HANDOFF.md`
-- `Docs/ACTIVE_TASK.md`
-- `Docs/level1-media-playback.md`
+The current model is:
 
-Runtime files reviewed for this note:
+1. `APlanetBody` is the authority.
+2. `ASpaceshipPawn` enforces the authority.
+3. `APlanetSurfaceRuntime` is optional visual continuation.
 
-- `Source/Zhoenus/SaveThemAllGameMode.cpp`
-- `Source/Zhoenus/SpaceshipPawn.cpp`
-- `Source/Zhoenus/DonutFlyerSpawner.cpp`
+That is the smallest model that still respects the real problem:
 
-Map/config inspection used for this note:
+- visuals can lag
+- physics rules cannot
 
-- `Content/Map/Level-1.umap`
-- `Config/DefaultEngine.ini`
+## Simple Planet Concept
 
-## What We Verified
+### `APlanetBody`
 
-### 1. `Level-1` is the gameplay map, not lobby context
+Owns the world-law data:
 
-`Config/DefaultEngine.ini` routes `Level-*` maps back to
-`/Game/Blueprints/SaveThemAllV1.SaveThemAllV1_C`, so `Level-1` is the live
-`SaveThemAll` flight map rather than a menu shell.
+- `PlanetCenter`
+- `PlanetRadius`
+- `GuardrailClearance`
+- authored core bounds built from relevant non-sky level actors
 
-### 2. The ship currently has no altitude clamp or out-of-bounds recovery path
+It initializes itself from the current gameplay ground and then exposes simple
+sphere queries.
 
-`ASpaceshipPawn::Tick()` moves the ship with:
+### `ASpaceshipPawn`
 
-- `AddActorLocalOffset(LocalMove, true)`
-- `AddActorLocalRotation(...)`
+Does not depend on one specific visual runtime actor anymore.
 
-That means the ship is free 6DOF movement with sweep-based collision against
-whatever colliders exist in the level.
+It now selects the nearest valid `APlanetBody` and applies one cheap rule:
 
-No explicit player-containment path was found in runtime code for:
+- if the ship is moving into the forbidden inside-shell region, push it back to
+  `surface + clearance`
+- remove the inward component of motion
+- keep the rest of the 6DOF feel intact
 
-- `KillZ`
-- world-bounds checks
-- `FellOutOfWorld`
-- altitude clamp / floor clamp
-- teleport-back / reset when leaving intended flight space
+This is the actual containment rule.
 
-So if the map exposes open space below or beyond the landscape, the pawn has no
-second-line gameplay rule that pulls it back into the intended play volume.
+Important constraint:
 
-### 3. Existing collision response is reactive, not containment-aware
+- authored `Level-1` core space wins over the planet barrier
+- the guardrail only applies outside that authored core
+- the goal route and any other intentional static gameplay geometry inside the
+  authored core must remain playable even if they sit below the notional
+  spherical shell
 
-`ASpaceshipPawn::NotifyHit()` deflects the ship when it collides with something,
-but it only runs after a real collision occurs.
+### `APlanetSurfaceRuntime`
 
-That is useful for geometry response, but it does not solve the case where the
-player simply finds an open route past the landscape edge and into the
-under-terrain space.
+Uses the active `APlanetBody` for planet math and only draws the cheap outer
+surface continuation.
 
-### 4. The project already treats the landscape like "ground" in one system
+That means:
 
-`ADonutFlyerSpawner` traces downward through the spawn box and rejects candidate
-flyer spawns that are too close to the terrain surface.
+- if runtime generation is slow, visuals may pop
+- but the player should still respect the planet boundary
 
-That tells us two things:
+## Why This Is Better
 
-- the map is already expected to have a meaningful ground/terrain surface
-- the "stay above the landscape" rule exists for spawn validation, but only at
-  spawn time
+- It is cheaper than making collision depend on generated terrain.
+- It is more reliable than trying to outrun a visual system.
+- It is simple enough to carry across desktop, console, tablet, `iOS`, and
+  `Android`.
+- It can scale to future multiple planets because the ship queries a planet
+  body, not a special-case `Level-1` landscape hack.
 
-It is not currently a player-flight containment system.
+## Current Runtime State
 
-### 5. The `Level-1` map asset does not show an obvious underside-containment actor
+`ASaveThemAllGameMode` now spawns:
 
-String inspection of `Content/Map/Level-1.umap` surfaced obvious actors such as:
+- `APlanetBody` when planet boundary is enabled
+- `APlanetSurfaceRuntime` when planet surface visuals are enabled
 
-- `Landscape_2`
-- `Goal-v1_C_1`
-- `DonutFlyerSpawner_1`
-- `LightmassImportanceVolume_1`
+Current defaults:
 
-The same inspection did not surface an obvious:
+### Planet authority
+- `PlanetRadius=1500000.0`
+- `GuardrailClearance=350.0`
+- `AuthoredCoreBoundsPadding=12000.0`
 
-- `BlockingVolume`
-- `PhysicsVolume`
-- `TriggerVolume`
+### Planet visuals
+- `TileWorldSize=30000.0`
+- `TileResolution=8`
+- `TileRingCount=2`
+- `RebuildDistance=12000.0`
 
-dedicated to stopping or recovering the player when leaving the intended
-airspace.
+## Validation Status
 
-This is not the same as a full editor inspection, but it is meaningful evidence
-that the map currently does not advertise a clear containment volume through its
-serialized actor names.
+Verified:
 
-### 6. No obvious map-side `KillZ` or world-bounds strings were found
+- `ZhoenusEditor` builds with the split model.
+- Headless `Level-1` boot shows:
+  - planet body authored-core bounds cache
+  - planet body initialization
+  - planet surface runtime waiting outside the authored core
 
-String inspection of `Content/Map/Level-1.umap` did not surface:
+Not yet proven:
 
-- `KillZ`
-- `bEnableWorldBoundsChecks`
-
-That is still weaker than opening the map in the editor and reading World
-Settings directly, but it supports the current interpretation that there is no
-clear map-authored fail-safe already waiting to catch under-landscape flight.
-
-## Current Interpretation
-
-This currently reads as a level-containment gap more than a ship-handling bug.
-
-The ship is doing what the runtime allows:
-
-- move freely in 6DOF
-- stop only when collision exists
-- continue into any open space the level exposes
-
-So the failure mode is:
-
-1. the landscape has a reachable edge / underside route
-2. the ship can physically travel through that route
-3. runtime has no fallback rule once the player is below the intended terrain
-
-## Why This Matters
-
-- It breaks the readability of `Level-1` as an intentional flyover playspace.
-- It lets the player leave the core gather-and-save space without clear gameplay
-  feedback.
-- It risks awkward camera, reticle, and HUD composition against terrain
-  undersides and void space.
-- It weakens confidence in the level boundary in the same way that trap pockets
-  weaken the Gate of Oblivion: the space stops reading as trustworthy.
-
-## Discussion Outcome
-
-Follow-up discussion narrowed the boundary expectations for `Level-1`:
-
-- the whole `Level-1` map is intended to be playable space
-- players should remain effectively unbounded in the air
-- perimeter blocker rings are a poor fit because they change the flight feel
-- mobile support matters, so simply covering a huge "planet" with expensive
-  landscape is also a poor fit
-
-The current chosen direction is:
-
-- extend the reachable terrain outward with flat, low-cost landscape
-- keep that extension visually and technically cheap compared to the authored
-  core of the map
-- use that outer band to move the hard terrain edge farther away from normal
-  play rather than boxing the player in with side blockers
-
-This is intentionally different from:
-
-- a hard perimeter `BlockingVolume` solution
-- a terrain-aware runtime recovery rule based on "below terrain at this XY"
-- a full high-detail landscape expansion around the entire map
+- final gameplay feel at the handoff
+- whether the current radius / clearance / tile values feel right in live play
 
 ## Design Guardrails
 
-The current doc set should assume the following unless the task changes again:
+- Keep `APlanetBody` as the authority.
+- Keep `ASpaceshipPawn` responsible for enforcement.
+- Keep `APlanetSurfaceRuntime` visual-only.
+- Do not re-couple containment to mesh generation.
+- Do not fall back to blocker walls or blind static landscape growth.
 
-- the first iteration is a map-side landscape expansion task, not a pawn
-  movement rewrite
-- the added terrain should be mostly flat and low cost
-- the extension should cover the reachable seam, not try to build a literal
-  full planet
-- the fix should preserve the open 6DOF feel instead of creating side-wall
-  behavior
-- mobile targets matter, so the outer band should stay cheaper than the
-  authored gameplay core
+## Future Multi-Planet Reality
 
-## Open Implementation Questions
+Do not over-complicate this yet.
 
-- Which edge or edges of the current landscape are actually reachable in normal
-  play and should be extended first?
-- How wide does the first flat outer band need to be to make the current seam
-  effectively unreachable during a normal run?
-- Can the outer band reuse the current landscape material as-is, or does it
-  need a simpler treatment for mobile cost?
-- Which visual or gameplay details should remain confined to the authored core
-  so the extension stays cheap?
+The current intended path is:
 
-## Recommended Next Work
+- each planet gets an `APlanetBody`
+- the ship selects the nearest valid body
+- each body may optionally have a surface runtime companion
 
-1. Open `Level-1` in the editor and inspect the exact reachable seam route or
-   routes.
-2. Inspect the current landscape layout and determine the smallest practical
-   flat extension pattern.
-3. Add a conservative first outer band around the reachable edge instead of a
-   full all-direction expansion.
-4. Validate that normal 6DOF play, flyer gathering, goal saving, and the
-   song-ended transition still behave the same after the map change.
+That is enough for now.
 
-## Current Implementation Direction
-
-The first iteration should aim for a practical mobile-safe terrain extension:
-
-- add only the extra landscape needed to push the reachable seam away from
-  normal runs
-- keep the outer terrain mostly flat and cheap
-- avoid adding dense sculpt detail, gameplay clutter, or heavy material cost in
-  that outer band
-- treat the existing authored play zone as the high-value gameplay core
-
-Because the project targets `iOS` and `Android`, this extension should stay
-conservative. The goal is not to make an enormous world. The goal is to make
-the current landscape edge effectively unreachable during normal play without
-damaging the open 6DOF feel.
-
-## Scope Of This Pass
-
-This pass documents the issue and the agreed direction only.
-
-No runtime behavior, map assets, collision setup, or player-movement code were
-changed.
+If future gameplay needs more than nearest-body selection, solve that only when
+the game actually reaches that point.

@@ -64,6 +64,9 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<USoundBase> LobbyMusicSound;
 
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> LobbyMusicFallbackSound;
+
 	FTimerHandle LobbyMusicReplayTimerHandle;
 	FTimerHandle LobbyMusicFadeOutTimerHandle;
 };

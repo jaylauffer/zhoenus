@@ -9,6 +9,7 @@ public class Zhoenus : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
 	                PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "EngineSettings", "InputCore", "UMG", "Slate", "SlateCore", "Niagara", "MetasoundEngine", "AudioExtensions", "EnhancedInput", "CommonUI", "MediaAssets", "RenderCore", "AssetRegistry" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "ProceduralMeshComponent" });
 		//PrivateDependecyModuleNames.AddRange(new string[] { "Metasound" });
 	}
 }

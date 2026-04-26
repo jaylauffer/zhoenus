@@ -21,7 +21,7 @@ UE5 flying-action game project centered on the `SaveThemAll` loop: fly the ship,
 - [Gate clean-save design](Docs/gate-clean-save-design.md)
 - [Reticle principles](Docs/reticle-principles.md)
 - [Level-1 media playback](Docs/level1-media-playback.md)
-- [Level-1 landscape boundary note](Docs/level1-landscape-boundary.md)
+- [Level-1 planet boundary note](Docs/level1-landscape-boundary.md)
 - [SaveThemAll music playback](Docs/save-them-all-music-playback.md)
 - [EAB + qcoin integration plan](Docs/eab-qcoin-integration-plan.md)
 - [Game design concepts](Docs/game-design-concepts.md)
@@ -31,6 +31,8 @@ UE5 flying-action game project centered on the `SaveThemAll` loop: fly the ship,
 - `Source/Zhoenus/SaveThemAllGameMode.cpp`
 - `Source/Zhoenus/SaveThemAllGameInstance.h`
 - `Source/Zhoenus/SaveThemAllGameInstance.cpp`
+- `Source/Zhoenus/PlanetBody.cpp`
+- `Source/Zhoenus/PlanetSurfaceRuntime.cpp`
 - `Source/Zhoenus/SpaceshipPawn.cpp`
 - `Source/Zhoenus/SaveThemAllPlayerController.cpp`
 
@@ -55,8 +57,9 @@ UE5 flying-action game project centered on the `SaveThemAll` loop: fly the ship,
 - Debug point grants are now available through the shared player-controller console command `GrantPowerPoints <amount>` in non-shipping builds only. It adds directly to `USaveThemAllGameInstance::points`, mirrors the grant into `AcquiredPoints`, and saves immediately so the `PowerUp` screens can be tested without playing a full round.
 - Project source control is intentionally disabled. `Config/DefaultSourceControlSettings.ini` sets `Provider=None`, and the local Mac editor cache mirrors that in `Saved/Config/MacEditor/SourceControlSettings.ini` to avoid Perforce startup noise on this machine.
 - `Level-1` can now randomize in-world movie playback from `Content/Movies` at runtime through `ALevelVideoSurfaceManager`, which is spawned by `ASaveThemAllGameMode`. It swaps tagged or named static-mesh surfaces over to a media-backed material and chooses a random clip on start and after each clip ends.
-- `Level-1` currently has a reachable terrain edge that lets the player get under the landscape. The current direction is to push that seam outward with a flat, low-cost outer landscape band instead of changing the flight feel with perimeter blockers. Keep that extension conservative enough for `iOS` and `Android`. See `Docs/level1-landscape-boundary.md`.
+- `Level-1` containment is now split into cheap authority plus optional visuals. `ASaveThemAllGameMode` spawns `APlanetBody` as the authoritative center/radius/core-bounds model and `APlanetSurfaceRuntime` as the cheap procedural outer-surface visual. `APlanetBody` builds its authored-core bounds from relevant non-sky level actors, and `ASpaceshipPawn` enforces the guardrail against the nearest active `APlanetBody`. The planet barrier only applies outside that authored core so the goal route and static gameplay geometry remain authoritative. Current follow-up is gameplay tuning of handoff, radius, and surface presentation for console/desktop, tablet, `iOS`, and `Android`. See `Docs/level1-landscape-boundary.md`.
 - `SaveThemAll` music no longer depends on editing the `LevelSong` MetaSound graph to change the playable set. `ASaveThemAllGameMode` now builds a runtime playlist from configured `/Game/Sound` asset paths plus optional directory scanning, then plays one track for the run and still advances to `PowerUp` when that track ends.
+- Runtime-loaded music now has explicit packaging guardrails. `DefaultGame.ini` forces `/Game/Sound/Game` and `/Game/Sound/Lobby` to cook for device builds, and `AZhoenusLobbyGameMode` keeps a bundled `LobbySong` fallback so menu music still resolves if the configured soft path fails on mobile.
 
 ## Portable Project Copy
 

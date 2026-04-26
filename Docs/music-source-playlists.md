@@ -69,6 +69,9 @@ Current immediate target:
 - imported lobby assets now live under `/Game/Sound/Lobby`
 - the current curated runtime lobby asset is
   `/Game/Sound/Lobby/LobbySong.LobbySong`
+- cooked builds must explicitly include `/Game/Sound/Game` and
+  `/Game/Sound/Lobby`, because both gameplay and lobby music are selected at
+  runtime from project state rather than only from hard map references
 
 ## Immediate content intent
 
