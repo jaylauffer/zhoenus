@@ -145,6 +145,10 @@ int32 UZhoenusExpandLevel1LandscapeCommandlet::Main(const FString& Params)
 	int32 PaddingComponents = 2;
 	int32 PaddingComponentsX = PaddingComponents;
 	int32 PaddingComponentsY = PaddingComponents;
+	int32 PaddingComponentsWest = PaddingComponentsX;
+	int32 PaddingComponentsEast = PaddingComponentsX;
+	int32 PaddingComponentsSouth = PaddingComponentsY;
+	int32 PaddingComponentsNorth = PaddingComponentsY;
 
 	FParse::Value(*Params, TEXT("Level="), LevelAssetPath);
 	FParse::Value(*Params, TEXT("Landscape="), LandscapeNameFilter);
@@ -153,15 +157,25 @@ int32 UZhoenusExpandLevel1LandscapeCommandlet::Main(const FString& Params)
 	PaddingComponentsY = PaddingComponents;
 	FParse::Value(*Params, TEXT("PaddingComponentsX="), PaddingComponentsX);
 	FParse::Value(*Params, TEXT("PaddingComponentsY="), PaddingComponentsY);
+	PaddingComponentsWest = PaddingComponentsX;
+	PaddingComponentsEast = PaddingComponentsX;
+	PaddingComponentsSouth = PaddingComponentsY;
+	PaddingComponentsNorth = PaddingComponentsY;
+	FParse::Value(*Params, TEXT("PaddingComponentsWest="), PaddingComponentsWest);
+	FParse::Value(*Params, TEXT("PaddingComponentsEast="), PaddingComponentsEast);
+	FParse::Value(*Params, TEXT("PaddingComponentsSouth="), PaddingComponentsSouth);
+	FParse::Value(*Params, TEXT("PaddingComponentsNorth="), PaddingComponentsNorth);
 
 	const bool bDryRun = FParse::Param(*Params, TEXT("DryRun"));
 
-	if (PaddingComponentsX < 0 || PaddingComponentsY < 0)
+	if (PaddingComponentsWest < 0 || PaddingComponentsEast < 0 || PaddingComponentsSouth < 0 || PaddingComponentsNorth < 0)
 	{
 		UE_LOG(LogZhoenusExpandLevel1LandscapeCommandlet, Error,
-			TEXT("Padding components must be non-negative. Got X=%d Y=%d."),
-			PaddingComponentsX,
-			PaddingComponentsY);
+			TEXT("Padding components must be non-negative. Got west=%d east=%d south=%d north=%d."),
+			PaddingComponentsWest,
+			PaddingComponentsEast,
+			PaddingComponentsSouth,
+			PaddingComponentsNorth);
 		return 1;
 	}
 
@@ -223,20 +237,22 @@ int32 UZhoenusExpandLevel1LandscapeCommandlet::Main(const FString& Params)
 	const int32 ComponentSizeQuads = SourceLandscape->ComponentSizeQuads;
 	const int32 OldComponentCountX = (MaxX - MinX) / ComponentSizeQuads;
 	const int32 OldComponentCountY = (MaxY - MinY) / ComponentSizeQuads;
-	const int32 NewComponentCountX = OldComponentCountX + PaddingComponentsX * 2;
-	const int32 NewComponentCountY = OldComponentCountY + PaddingComponentsY * 2;
+	const int32 NewComponentCountX = OldComponentCountX + PaddingComponentsWest + PaddingComponentsEast;
+	const int32 NewComponentCountY = OldComponentCountY + PaddingComponentsSouth + PaddingComponentsNorth;
 
 	const FIntRect OldRegion(MinX, MinY, MaxX, MaxY);
 	const FIntRect NewRegion(
-		MinX - PaddingComponentsX * ComponentSizeQuads,
-		MinY - PaddingComponentsY * ComponentSizeQuads,
-		MaxX + PaddingComponentsX * ComponentSizeQuads,
-		MaxY + PaddingComponentsY * ComponentSizeQuads);
+		MinX - PaddingComponentsWest * ComponentSizeQuads,
+		MinY - PaddingComponentsSouth * ComponentSizeQuads,
+		MaxX + PaddingComponentsEast * ComponentSizeQuads,
+		MaxY + PaddingComponentsNorth * ComponentSizeQuads);
 
 	UE_LOG(LogZhoenusExpandLevel1LandscapeCommandlet, Log,
-		TEXT("Requested padding components X=%d Y=%d -> new component count=(%d,%d) new extent min=(%d,%d) max=(%d,%d)"),
-		PaddingComponentsX,
-		PaddingComponentsY,
+		TEXT("Requested padding west=%d east=%d south=%d north=%d -> new component count=(%d,%d) new extent min=(%d,%d) max=(%d,%d)"),
+		PaddingComponentsWest,
+		PaddingComponentsEast,
+		PaddingComponentsSouth,
+		PaddingComponentsNorth,
 		NewComponentCountX,
 		NewComponentCountY,
 		NewRegion.Min.X,
@@ -340,10 +356,12 @@ int32 UZhoenusExpandLevel1LandscapeCommandlet::Main(const FString& Params)
 	}
 
 	UE_LOG(LogZhoenusExpandLevel1LandscapeCommandlet, Log,
-		TEXT("Expanded %s with padding components X=%d Y=%d and saved %s."),
+		TEXT("Expanded %s with padding west=%d east=%d south=%d north=%d and saved %s."),
 		*OriginalActorLabel,
-		PaddingComponentsX,
-		PaddingComponentsY,
+		PaddingComponentsWest,
+		PaddingComponentsEast,
+		PaddingComponentsSouth,
+		PaddingComponentsNorth,
 		*LevelAssetPath);
 
 	return 0;

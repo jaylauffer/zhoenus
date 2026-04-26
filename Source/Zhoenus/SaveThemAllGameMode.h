@@ -40,6 +40,8 @@ class USoundBase;
 class UAudioComponent;
 class UNiagaraSystem;
 class ALevelVideoSurfaceManager;
+class APlanetBody;
+class APlanetSurfaceRuntime;
 
 UCLASS(Config=Game, MinimalAPI)
 class ASaveThemAllGameMode : public AZhoenusGameMode
@@ -67,6 +69,12 @@ private:
 	bool StartSongForRun(int64 TotalAttempts);
 	FString NormalizeSongObjectPath(const FString& SongPath) const;
 
+	UPROPERTY(EditAnywhere, Config, Category = "Planet")
+	bool bEnablePlanetBoundary = true;
+
+	UPROPERTY(EditAnywhere, Config, Category = "Planet")
+	bool bEnablePlanetSurfaceRuntime = true;
+
 	UPROPERTY(EditAnywhere, Config, Category = "Music")
 	bool bEnableRuntimeSongPlaylist = true;
 
@@ -91,6 +99,12 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<ALevelVideoSurfaceManager> LevelVideoSurfaceManager;
+
+	UPROPERTY(Transient)
+	TObjectPtr<APlanetBody> PlanetBody;
+
+	UPROPERTY(Transient)
+	TObjectPtr<APlanetSurfaceRuntime> PlanetSurfaceRuntime;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UAudioComponent> BackgroundMusicComponent;

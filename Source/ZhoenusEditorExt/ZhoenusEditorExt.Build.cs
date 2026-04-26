@@ -20,6 +20,7 @@ public class ZhoenusEditorExt : ModuleRules
 			new string[]
 			{
 				"AssetRegistry",
+				"Foliage",
 				"Landscape",
 				"MaterialEditor",
 				"Niagara",

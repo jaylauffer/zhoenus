@@ -6,6 +6,7 @@
 #include "SpaceshipPawn.generated.h"
 
 struct FInputActionValue;
+class APlanetBody;
 
 struct FProjectileAimTraceResult
 {
@@ -130,8 +131,12 @@ protected:
         // End APawn overrides
 
 private:
+	void RefreshActivePlanetBody(bool bForceRefresh = false);
+	void EnforcePlanetGuardrail();
 
         bool bCanFire;
+	TWeakObjectPtr<APlanetBody> ActivePlanetBody;
+	float NextPlanetBodyRefreshTime = 0.f;
 	FVector GunOffset;
 	void FireShot();
 	void ShotTimerExpired();
