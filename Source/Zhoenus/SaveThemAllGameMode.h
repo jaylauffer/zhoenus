@@ -42,6 +42,7 @@ class UNiagaraSystem;
 class ALevelVideoSurfaceManager;
 class APlanetBody;
 class APlanetSurfaceRuntime;
+class AZhoenusTalkingHeadAssistant;
 
 UCLASS(Config=Game, MinimalAPI)
 class ASaveThemAllGameMode : public AZhoenusGameMode
@@ -61,6 +62,8 @@ public:
 
 private:
 	void RefreshInitialDonutTotal();
+	void SpawnTalkingHeadAssistant();
+	AActor* FindTalkingHeadBaseActor() const;
 	void BuildSongPlaylist();
 	void GatherSongAssetPaths(TArray<FSoftObjectPath>& OutSongAssetPaths) const;
 	int32 SelectSongIndex(int64 TotalAttempts) const;
@@ -97,6 +100,21 @@ private:
 	UPROPERTY(EditAnywhere, Config, Category = "Music")
 	FString FallbackSongPath = TEXT("/Game/Sound/Game/LevelSong.LevelSong");
 
+	UPROPERTY(EditAnywhere, Config, Category = "Talking Head")
+	bool bSpawnTalkingHeadAssistant = true;
+
+	UPROPERTY(EditAnywhere, Config, Category = "Talking Head")
+	FName TalkingHeadBaseActorName = TEXT("TalkingHeadBase");
+
+	UPROPERTY(EditAnywhere, Config, Category = "Talking Head", meta = (ClampMin = "0.0"))
+	float TalkingHeadHeightAboveBase = 420.f;
+
+	UPROPERTY(EditAnywhere, Config, Category = "Talking Head")
+	FVector TalkingHeadSpawnOffset = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, Category = "Talking Head")
+	TSubclassOf<AZhoenusTalkingHeadAssistant> TalkingHeadAssistantClass;
+
 	UPROPERTY(Transient)
 	TObjectPtr<ALevelVideoSurfaceManager> LevelVideoSurfaceManager;
 
@@ -105,6 +123,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<APlanetSurfaceRuntime> PlanetSurfaceRuntime;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AZhoenusTalkingHeadAssistant> TalkingHeadAssistant;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UAudioComponent> BackgroundMusicComponent;

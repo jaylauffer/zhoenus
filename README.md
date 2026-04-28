@@ -22,6 +22,7 @@ UE5 flying-action game project centered on the `SaveThemAll` loop: fly the ship,
 - [Reticle principles](Docs/reticle-principles.md)
 - [Level-1 media playback](Docs/level1-media-playback.md)
 - [Level-1 planet boundary note](Docs/level1-landscape-boundary.md)
+- [Level-1 talking head assistant](Docs/talking-head-assistant.md)
 - [SaveThemAll music playback](Docs/save-them-all-music-playback.md)
 - [EAB + qcoin integration plan](Docs/eab-qcoin-integration-plan.md)
 - [Game design concepts](Docs/game-design-concepts.md)
@@ -58,6 +59,7 @@ UE5 flying-action game project centered on the `SaveThemAll` loop: fly the ship,
 - Project source control is intentionally disabled. `Config/DefaultSourceControlSettings.ini` sets `Provider=None`, and the local Mac editor cache mirrors that in `Saved/Config/MacEditor/SourceControlSettings.ini` to avoid Perforce startup noise on this machine.
 - `Level-1` can now randomize in-world movie playback from `Content/Movies` at runtime through `ALevelVideoSurfaceManager`, which is spawned by `ASaveThemAllGameMode`. It swaps tagged or named static-mesh surfaces over to a media-backed material and chooses a random clip on start and after each clip ends.
 - `Level-1` containment is now split into cheap authority plus optional visuals. `ASaveThemAllGameMode` spawns `APlanetBody` as the authoritative center/radius/core-bounds model and `APlanetSurfaceRuntime` as the cheap procedural outer-surface visual. `APlanetBody` builds its authored-core bounds from relevant non-sky level actors, and `ASpaceshipPawn` enforces the guardrail against the nearest active `APlanetBody`. The planet barrier only applies outside that authored core so the goal route and static gameplay geometry remain authoritative. Current follow-up is gameplay tuning of handoff, radius, and surface presentation for console/desktop, tablet, `iOS`, and `Android`. See `Docs/level1-landscape-boundary.md`.
+- `Level-1` now has a native talking-head assistant path. Rename or tag the in-world metallic anchor as `TalkingHeadBase`; `ASaveThemAllGameMode` will spawn `AZhoenusTalkingHeadAssistant` above it. The assistant displays a configured face texture, offers fallback `SaveThemAll` guidance, and exposes `SubmitPlayerUtterance` / `OnPlayerUtterance` so a later local `gpt-oss` bridge can provide natural-language replies without making AI mandatory for gameplay.
 - `SaveThemAll` music no longer depends on editing the `LevelSong` MetaSound graph to change the playable set. `ASaveThemAllGameMode` now builds a runtime playlist from configured `/Game/Sound` asset paths plus optional directory scanning, then plays one track for the run and still advances to `PowerUp` when that track ends.
 - Runtime-loaded music now has explicit packaging guardrails. `DefaultGame.ini` forces `/Game/Sound/Game` and `/Game/Sound/Lobby` to cook for device builds, and `AZhoenusLobbyGameMode` keeps a bundled `LobbySong` fallback so menu music still resolves if the configured soft path fails on mobile.
 

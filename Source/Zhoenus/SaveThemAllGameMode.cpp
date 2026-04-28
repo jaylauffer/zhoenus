@@ -14,6 +14,7 @@
 #include "PlanetBody.h"
 #include "PlanetSurfaceRuntime.h"
 #include "SpaceshipHUD.h"
+#include "ZhoenusTalkingHeadAssistant.h"
 #include "EngineUtils.h"
 #include "Math/UnrealMathUtility.h"
 #include "CoreFwd.h"
@@ -55,6 +56,7 @@ ASaveThemAllGameMode::ASaveThemAllGameMode()
 	PlayerStateClass = AZhoenusPlayerState::StaticClass();
 	GameStateClass = ASaveThemAllGameState::StaticClass();
 	HUDClass = ASpaceshipHUD::StaticClass();
+	TalkingHeadAssistantClass = AZhoenusTalkingHeadAssistant::StaticClass();
 
     BuildSongPlaylist();
 }
@@ -92,6 +94,11 @@ void ASaveThemAllGameMode::BeginPlay()
 				PlanetSurfaceRuntime->SetPlanetBody(PlanetBody);
 			}
 		}
+	}
+
+	if (bSpawnTalkingHeadAssistant)
+	{
+		GetWorldTimerManager().SetTimerForNextTick(this, &ASaveThemAllGameMode::SpawnTalkingHeadAssistant);
 	}
 }
 
@@ -332,6 +339,91 @@ void ASaveThemAllGameMode::RefreshInitialDonutTotal()
 	{
 		UE_LOG(LogSaveThemAllGameMode, Warning, TEXT("Requested donut count does not match actual spawn count at level start."));
 	}
+}
+
+void ASaveThemAllGameMode::SpawnTalkingHeadAssistant()
+{
+	UWorld* World = GetWorld();
+	if (World == nullptr || !bSpawnTalkingHeadAssistant || TalkingHeadAssistant != nullptr)
+	{
+		return;
+	}
+
+	AActor* BaseActor = FindTalkingHeadBaseActor();
+	if (BaseActor == nullptr)
+	{
+		UE_LOG(LogSaveThemAllGameMode, Warning, TEXT("Talking head assistant requested, but base actor '%s' was not found."), *TalkingHeadBaseActorName.ToString());
+		return;
+	}
+
+	TSubclassOf<AZhoenusTalkingHeadAssistant> AssistantClass = TalkingHeadAssistantClass;
+	if (AssistantClass == nullptr)
+	{
+		AssistantClass = AZhoenusTalkingHeadAssistant::StaticClass();
+	}
+
+	FVector BaseOrigin = BaseActor->GetActorLocation();
+	FVector BaseExtent = FVector::ZeroVector;
+	BaseActor->GetActorBounds(true, BaseOrigin, BaseExtent);
+	const FVector SpawnLocation = BaseOrigin
+		+ FVector(0.f, 0.f, BaseExtent.Z + TalkingHeadHeightAboveBase)
+		+ TalkingHeadSpawnOffset;
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.Owner = this;
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	TalkingHeadAssistant = World->SpawnActor<AZhoenusTalkingHeadAssistant>(
+		AssistantClass,
+		SpawnLocation,
+		BaseActor->GetActorRotation(),
+		SpawnParameters);
+
+	if (TalkingHeadAssistant == nullptr)
+	{
+		UE_LOG(LogSaveThemAllGameMode, Warning, TEXT("Failed to spawn talking head assistant above '%s'."), *BaseActor->GetName());
+		return;
+	}
+
+	TalkingHeadAssistant->AttachToActor(BaseActor, FAttachmentTransformRules::KeepWorldTransform);
+	UE_LOG(LogSaveThemAllGameMode, Log, TEXT("Spawned talking head assistant above '%s' at %s."), *BaseActor->GetName(), *SpawnLocation.ToString());
+}
+
+AActor* ASaveThemAllGameMode::FindTalkingHeadBaseActor() const
+{
+	UWorld* World = GetWorld();
+	if (World == nullptr || TalkingHeadBaseActorName.IsNone())
+	{
+		return nullptr;
+	}
+
+	const FString TargetName = TalkingHeadBaseActorName.ToString();
+	for (TActorIterator<AActor> ActorIt(World); ActorIt; ++ActorIt)
+	{
+		AActor* Candidate = *ActorIt;
+		if (!IsValid(Candidate) || Candidate == this)
+		{
+			continue;
+		}
+
+		const FString CandidateName = Candidate->GetName();
+		if (Candidate->ActorHasTag(TalkingHeadBaseActorName)
+			|| Candidate->GetFName() == TalkingHeadBaseActorName
+			|| CandidateName.Equals(TargetName, ESearchCase::IgnoreCase)
+			|| CandidateName.StartsWith(TargetName + TEXT("_"), ESearchCase::IgnoreCase))
+		{
+			return Candidate;
+		}
+
+#if WITH_EDITOR
+		if (Candidate->GetActorLabel().Equals(TargetName, ESearchCase::IgnoreCase))
+		{
+			return Candidate;
+		}
+#endif
+	}
+
+	return nullptr;
 }
 
 void ASaveThemAllGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)

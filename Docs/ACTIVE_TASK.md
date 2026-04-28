@@ -6,7 +6,8 @@ Update this file as priorities change.
 
 ## Current Focus
 
-Define the Zhoenus achievement and EAB claim contract.
+Bring up the Level-1 talking-head assistant while keeping the achievement/EAB
+contract separate.
 
 The `SaveThemAll` loop under discussion is:
 
@@ -18,6 +19,11 @@ The `SaveThemAll` loop under discussion is:
 
 The integration goal is to mirror selected accomplishments to EAB without
 damaging local-first gameplay.
+
+The immediate gameplay-facing goal is to use the `TalkingHeadBase` actor in
+`Level-1` as the anchor for Jay's local assistant: an image projected above the
+metallic object, player-facing fallback guidance, and a clean natural-language
+seam that can later connect to a local `gpt-oss` agent.
 
 ## Current Product Boundary
 
@@ -73,6 +79,17 @@ Also read the specific gameplay docs if a claim touches that system:
 3. Define a local outbox shape that survives offline play and retry.
 4. Keep the first implementation event-level, not telemetry-heavy.
 5. Wire EAB only after the EAB fixtures and claim/award path are verified.
+
+## Talking Head Priorities
+
+1. Auto-spawn the native assistant above the actor named or tagged
+   `TalkingHeadBase`.
+2. Keep the first assistant useful without a live model by reading current
+   `SaveThemAll` state.
+3. Expose a natural-language seam for later local agent integration.
+4. Keep face/diffusion/model assets configurable rather than hard-coded into
+   gameplay logic.
+5. Do not make AI availability a requirement for run completion.
 
 ## Current Runtime Truth To Verify
 
