@@ -69,6 +69,8 @@ Current immediate target:
 - imported lobby assets now live under `/Game/Sound/Lobby`
 - the current curated runtime lobby asset is
   `/Game/Sound/Lobby/LobbySong.LobbySong`
+- additional imported lobby assets are resolved from `/Game/Sound/Lobby` by
+  `AZhoenusLobbyGameMode`
 - cooked builds must explicitly include `/Game/Sound/Game` and
   `/Game/Sound/Lobby`, because both gameplay and lobby music are selected at
   runtime from project state rather than only from hard map references
@@ -77,12 +79,22 @@ Current immediate target:
 
 The current `Music/Lobby` folder contains:
 
+- `MainOutput_2026-04-29_08-19-37.wav`
 - `Tropical-Delight-Menus-BGM.wav`
+- `Tropical-Delight-Savory-Recipe.wav`
+- `Working-for-a-living_2026-04-28_07-14-02_Enhanced.wav`
+
+Current imported lobby runtime assets:
+
+- `/Game/Sound/Lobby/LobbySong.LobbySong`
+- `/Game/Sound/Lobby/Tropical-Delight-Menus-BGM.Tropical-Delight-Menus-BGM`
 
 Immediate behavior target:
 
-- `LobbySong` should act as the background music for menu screens until the
-  lobby playlist grows beyond a single curated track
+- menu screens should build a lobby playlist from imported `/Game/Sound/Lobby`
+  assets
+- raw files in `Music/Lobby` are source material and must be imported before
+  they can play in cooked iOS builds
 
 ## Lobby context rule
 
@@ -101,13 +113,12 @@ override, so lobby ownership stays separate from the gameplay run loop.
 
 ## Current lobby playback target
 
-Until the lobby playlist grows into multiple curated tracks, the intended lobby
-behavior is:
+The intended lobby behavior is:
 
-- use `/Game/Sound/Lobby/LobbySong.LobbySong`
+- use the imported `/Game/Sound/Lobby` assets
 - play at approximately `42%` volume
-- when the song ends, wait a random interval between `16` and `42` seconds
-- then play it again
+- when a song ends, wait a random interval between `16` and `42` seconds
+- then play another lobby track, avoiding an immediate repeat when possible
 - fade in on playback start
 - fade out when leaving lobby context
 
@@ -127,13 +138,45 @@ behavior is:
 7. Lobby behavior should be owned by `AZhoenusLobbyGameMode`, not by the save
    game instance.
 
+## Implementation Direction
+
+The current `ASaveThemAllGameMode` and staged `AZhoenusLobbyGameMode` music
+work intentionally have different playback policies, and they should not keep
+duplicating low-level playlist plumbing forever.
+
+Keep separate:
+
+- gameplay song selection policy in `ASaveThemAllGameMode`
+- lobby song selection policy in `AZhoenusLobbyGameMode`
+- gameplay song-ended behavior, including the `PowerUp` transition
+- lobby song-ended behavior, including fade-out, silence delay, and replay
+
+Factor later:
+
+- normalizing `/Game/...` package paths into object paths
+- scanning a cooked sound asset directory through `AssetRegistry`
+- sorting discovered `USoundWave` assets deterministically
+- building a de-duplicated `FSoftObjectPath` playlist from configured and
+  scanned sources
+- loading `USoundBase` from a soft object path with clear fallback behavior
+
+A good next refactor target is a small shared helper such as
+`ZhoenusSoundPlaylist` or `ZhoenusMusicPlaylistResolver`. It should return
+resolved playlist data and loadable sound assets, not decide when music starts,
+what volume/fade policy to use, what index should be selected, or what should
+happen when playback finishes.
+
+This keeps the project DRY at the asset-resolution layer while preserving the
+important gameplay/menu split at the mode-behavior layer.
+
 ## Non-goals
 
 This note does not yet decide:
 
 - whether lobby playback lives in a game instance, startup map actor, UI
   widget, or dedicated audio manager in the final architecture
-- whether multiple lobby tracks should shuffle, rotate, or remain fixed
+- whether lobby playback should eventually support crossfades, weighted
+  rotation, or richer playlist curation
 
 Those are implementation decisions to make after the playlist intent is clear.
 
@@ -143,7 +186,7 @@ For current prototype work:
 
 - `Music/Game` feeds the gameplay playlist
 - `Music/Lobby` feeds the lobby playlist
-- `/Game/Sound/Lobby/LobbySong.LobbySong` is the current intended lobby/menu
-  runtime track
+- imported `/Game/Sound/Lobby` assets are the current intended lobby/menu
+  runtime playlist
 - menu screens should use lobby music
 - `Level-1` should keep using the gameplay playlist model

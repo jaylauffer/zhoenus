@@ -48,6 +48,32 @@ Why:
 - this keeps `USaveThemAllGameInstance` focused on persistent progression and
   ship state
 
+## Relationship To Gameplay Music
+
+`ASaveThemAllGameMode` has similar runtime music plumbing because it already
+builds a gameplay playlist from configured `/Game/Sound/Game` assets and
+scanned cooked sound assets. That overlap is real, but the two game modes should
+not be collapsed into one playback policy.
+
+Shared helper code is acceptable for asset-resolution mechanics:
+
+- path normalization
+- `AssetRegistry` sound scanning
+- deterministic asset sorting
+- de-duplicated soft-object playlist construction
+- soft-path loading and fallback attempts
+
+Mode-specific behavior must remain in the owning game mode:
+
+- `ASaveThemAllGameMode` keeps run-aware song selection, early-run curated
+  tracks, widening random pools, and the "song ends -> `PowerUp`" transition
+- `AZhoenusLobbyGameMode` keeps lobby randomization, previous-track avoidance,
+  fade in/out, random silence delay, and replay without ending a gameplay run
+
+Proceed by extracting only the shared resolver mechanics if the duplication
+starts to slow development. Do not move the gameplay or lobby playback lifecycle
+into `USaveThemAllGameInstance` as part of this slice.
+
 ## Runtime asset path
 
 Lobby source files:
@@ -58,9 +84,10 @@ Current imported lobby runtime assets:
 
 - `/Game/Sound/Lobby/*`
 
-Current curated active lobby asset:
+Current curated active lobby assets:
 
 - `/Game/Sound/Lobby/LobbySong.LobbySong`
+- `/Game/Sound/Lobby/Tropical-Delight-Menus-BGM.Tropical-Delight-Menus-BGM`
 
 Packaging note:
 
@@ -74,12 +101,13 @@ Packaging note:
 
 While the player is in lobby context:
 
-1. Play `LobbySong`
+1. Build a lobby playlist from configured `/Game/Sound/Lobby` assets and the
+   cooked lobby music directory.
 2. Use approximately `42%` volume
 3. Fade in when playback starts
 4. Allow the song to finish
 5. Wait a random silence interval between `16` and `42` seconds
-6. Play `LobbySong` again
+6. Play another lobby playlist entry, avoiding the previous track when possible
 
 When leaving lobby context:
 
@@ -90,14 +118,15 @@ When leaving lobby context:
 
 This prototype does not yet try to:
 
-- support multiple lobby tracks with shuffle logic
 - make lobby music participate in gameplay run completion logic
 - replace the gameplay playlist or `SaveThemAll` run-ending transition
+- play raw source files from `Music/Lobby` without importing them as Unreal
+  audio assets first
 
 ## Validation target
 
-- `Startup.umap` plays the lobby music behavior
-- `PowerUp.umap` plays the lobby music behavior
+- `Startup.umap` plays the lobby playlist behavior
+- `PowerUp.umap` plays the lobby playlist behavior
 - `Level-1.umap` does not use the lobby track
 - entering gameplay resolves to `SaveThemAllV1`, not the lobby game mode
 - gameplay still transitions to `PowerUp` when the gameplay song ends

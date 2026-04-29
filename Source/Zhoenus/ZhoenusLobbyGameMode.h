@@ -21,7 +21,11 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
-	USoundBase* ResolveLobbyMusic();
+	void BuildLobbyMusicPlaylist();
+	void GatherLobbyMusicAssetPaths(TArray<FSoftObjectPath>& OutLobbyMusicAssetPaths) const;
+	int32 SelectLobbyMusicIndex() const;
+	USoundBase* LoadLobbyMusicFromPath(const FSoftObjectPath& MusicPath) const;
+	FString NormalizeLobbyMusicObjectPath(const FString& MusicPath) const;
 	void StartLobbyMusic();
 	void StopLobbyMusic(bool bFadeOut);
 	void ScheduleLobbyMusicReplay();
@@ -43,6 +47,15 @@ private:
 	UPROPERTY(EditAnywhere, Config, Category = "Music|Lobby")
 	FString LobbyMusicPath = TEXT("/Game/Sound/Lobby/LobbySong.LobbySong");
 
+	UPROPERTY(EditAnywhere, Config, Category = "Music|Lobby")
+	TArray<FString> LobbyMusicAssetPaths;
+
+	UPROPERTY(EditAnywhere, Config, Category = "Music|Lobby")
+	bool bScanLobbyMusicDirectory = true;
+
+	UPROPERTY(EditAnywhere, Config, Category = "Music|Lobby")
+	FString LobbyMusicDirectory = TEXT("/Game/Sound/Lobby");
+
 	UPROPERTY(EditAnywhere, Config, Category = "Music|Lobby", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float LobbyMusicVolumeMultiplier = 0.42f;
 
@@ -62,10 +75,12 @@ private:
 	TObjectPtr<UAudioComponent> LobbyMusicComponent;
 
 	UPROPERTY(Transient)
-	TObjectPtr<USoundBase> LobbyMusicSound;
+	TArray<FSoftObjectPath> RuntimeLobbyMusicPlaylist;
 
 	UPROPERTY(Transient)
 	TObjectPtr<USoundBase> LobbyMusicFallbackSound;
+
+	int32 CurrentLobbyMusicIndex = INDEX_NONE;
 
 	FTimerHandle LobbyMusicReplayTimerHandle;
 	FTimerHandle LobbyMusicFadeOutTimerHandle;
