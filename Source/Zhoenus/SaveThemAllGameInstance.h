@@ -94,5 +94,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Lifetime)
 	int64 TotalSuccess;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Lifetime)
+	int64 CleanSaveTotal;
+
 	void SyncShipSpeedStats(float CurrentMaxSpeed, float CurrentMinSpeed);
 };

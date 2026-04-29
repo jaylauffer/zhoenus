@@ -23,6 +23,22 @@ That means:
 - collisions on the decorative structure must push actors away instead of admitting them into dead spaces
 - the scoring trigger should live in the true pass-through path, not inside ambiguous mesh volume
 
+## Clean-Save Achievement Metric
+
+The first achievement-facing metric is a `SpaceShip` clean-save counter.
+
+Runtime rule:
+
+- a clean save is counted when the `SpaceShip` crosses the valid goal trigger
+- stabilize must be inactive when the ship crosses the goal trigger
+- any collision with terrain, `DonutFlyers`, gate blockers, or other actors resets the current clean-save streak
+- goal trigger overlap is not a collision failure
+
+The gameplay state should expose the current clean-save streak so HUD, tuning,
+and local achievement logic can read it immediately. The save-game profile may
+also keep a lifetime clean-save total for later EAB claim submission, but EAB
+remains the authority for awarding achievements.
+
 ## Separation Of Concerns
 
 The gate should be treated as three different layers instead of one asset doing everything.
