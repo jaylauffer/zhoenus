@@ -13,6 +13,7 @@
 #include "Engine/StaticMesh.h"
 #include "EngineUtils.h"
 #include "PlanetBody.h"
+#include "SaveThemAllGameState.h"
 #include "Sound/SoundBase.h"
 #include "DrawDebugHelpers.h"
 #include "TimerManager.h"
@@ -261,6 +262,11 @@ void ASpaceshipPawn::NotifyHit(class UPrimitiveComponent* MyComp, class AActor* 
 {
 	Super::NotifyHit(MyComp, Other, OtherComp, bSelfMoved, HitLocation, HitNormal, NormalImpulse, Hit);
 
+	if (IsValid(Other) && Other != this)
+	{
+		ResetCleanSaveAttempt();
+	}
+
 	//if (OtherComp->GetOwner()->IsA<ADonutFlyerPawn>())
 	if(OtherComp && OtherComp->IsSimulatingPhysics())
 	{
@@ -449,6 +455,38 @@ void ASpaceshipPawn::OrigDisengageAutoCorrect(float Val)
 	{
 		GetPlaneMesh()->SetAngularDamping(20.f * Val);
 		GetPlaneMesh()->SetLinearDamping(20.f * Val);
+	}
+}
+
+void ASpaceshipPawn::RecordGoalPassForCleanSave()
+{
+	if (!FMath::IsNearlyEqual(AutoCorrectRate, 0.f))
+	{
+		return;
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		if (ASaveThemAllGameState* SaveThemAllGameState = World->GetGameState<ASaveThemAllGameState>())
+		{
+			SaveThemAllGameState->RecordCleanSave();
+		}
+	}
+
+	if (USaveThemAllGameInstance* SaveThemAllGameInstance = GetGameInstance<USaveThemAllGameInstance>())
+	{
+		++SaveThemAllGameInstance->CleanSaveTotal;
+	}
+}
+
+void ASpaceshipPawn::ResetCleanSaveAttempt()
+{
+	if (UWorld* World = GetWorld())
+	{
+		if (ASaveThemAllGameState* SaveThemAllGameState = World->GetGameState<ASaveThemAllGameState>())
+		{
+			SaveThemAllGameState->ResetCleanSaveStreak();
+		}
 	}
 }
 

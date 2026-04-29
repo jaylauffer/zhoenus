@@ -75,6 +75,7 @@ USaveThemAllGameInstance::USaveThemAllGameInstance(const FObjectInitializer& ini
 {
 	ResetShipStats(shipStats);
 	donutAggroTuning = FDonutAggroTuning{};
+	CleanSaveTotal = 0;
 }
 
 void USaveThemAllGameInstance::Init()
@@ -101,6 +102,7 @@ void USaveThemAllGameInstance::MakeNewGame()
 	ConvertedPoints = 0.f;
 	TotalAttempts = 0;
 	TotalSuccess = 0;
+	CleanSaveTotal = 0;
 }
 
 float USaveThemAllGameInstance::GetConvertibleForwardSpeed() const
@@ -203,6 +205,7 @@ void USaveThemAllGameInstance::SaveGame()
 		save->ConvertedPoints = ConvertedPoints;
 		save->TotalAttempts = TotalAttempts;
 		save->TotalSuccess = TotalSuccess;
+		save->CleanSaveTotal = CleanSaveTotal;
 
 		UGameplayStatics::AsyncSaveGameToSlot(save, save->SaveSlotName, save->UserIndex);
 	}
@@ -223,6 +226,7 @@ bool USaveThemAllGameInstance::LoadGame(const FString& SaveSlot, int32 UserIndex
 		ConvertedPoints = save->ConvertedPoints;
 		TotalAttempts = save->TotalAttempts;
 		TotalSuccess = save->TotalSuccess;
+		CleanSaveTotal = save->CleanSaveTotal;
 		return true;
 	}
 	return false;

@@ -87,4 +87,7 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = Lifetime)
 	int64 TotalSuccess;
 
+	UPROPERTY(VisibleAnywhere, Category = Lifetime)
+	int64 CleanSaveTotal;
+
 };

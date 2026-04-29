@@ -83,6 +83,12 @@ public:
 
 	void FireWeapon(float Val);
 
+	UFUNCTION(BlueprintCallable, Category = "Clean Save")
+	void RecordGoalPassForCleanSave();
+
+	UFUNCTION(BlueprintCallable, Category = "Clean Save")
+	void ResetCleanSaveAttempt();
+
 	UPROPERTY(Category=Team, EditAnywhere)
 	int32 Team;
 

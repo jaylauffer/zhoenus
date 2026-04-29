@@ -42,6 +42,7 @@ void AGoal::OnGoal(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
         ASpaceshipPawn* flyer{ Cast<ASpaceshipPawn>(otherActor) };
         if (flyer)
         {
+                flyer->RecordGoalPassForCleanSave();
                 const FVector GoalLockLocation = IsValid(CollisionShape) ? CollisionShape->Bounds.Origin : GetActorLocation();
                 for (const auto& dnt : flyer->Followers)
                 {
@@ -54,5 +55,4 @@ void AGoal::OnGoal(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
                 flyer->Followers.Empty();
         }
 }
-
 

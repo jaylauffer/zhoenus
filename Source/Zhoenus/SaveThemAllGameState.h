@@ -14,13 +14,21 @@ class ASaveThemAllGameState : public AGameStateBase
 public:
 	ASaveThemAllGameState();
 
-        UPROPERTY(BlueprintReadWrite)
-        int32 Saved;
+	UPROPERTY(BlueprintReadWrite)
+	int32 Saved;
 
-        UPROPERTY(BlueprintReadWrite)
-        int32 Total;
+	UPROPERTY(BlueprintReadWrite)
+	int32 Total;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Clean Save")
+	int32 CleanSaveStreak;
+
+	UFUNCTION(BlueprintCallable, Category = "Clean Save")
+	void RecordCleanSave();
+
+	UFUNCTION(BlueprintCallable, Category = "Clean Save")
+	void ResetCleanSaveStreak();
 
 };
-
 
 
