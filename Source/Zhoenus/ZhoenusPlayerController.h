@@ -50,7 +50,6 @@ private:
 
 	void HandleStickPressureChanged(int32 ControlIndex, float Pressure, bool bIsActive);
 	void RefreshTouchPressureActions();
-	float NormalizeTouchPressure(float RawPressure, float Deadzone, float Scale) const;
 	void UpdateTouchToggleVisuals() const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Touch Pressure", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
@@ -58,18 +57,6 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Touch Pressure", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
 	int32 FirePressureControlIndex = 1;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Touch Pressure", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "0.95"))
-	float StabilizePressureDeadzone = 0.12f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Touch Pressure", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "0.95"))
-	float FirePressureDeadzone = 0.12f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Touch Pressure", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "2.0"))
-	float StabilizePressureScale = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Touch Pressure", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "2.0"))
-	float FirePressureScale = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Touch Pressure", meta = (AllowPrivateAccess = "true"))
 	FLinearColor TouchToggleInactiveColor = FLinearColor::White;

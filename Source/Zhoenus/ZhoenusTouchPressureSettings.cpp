@@ -42,3 +42,32 @@ float UZhoenusTouchPressureSettings::NormalizePressure(const bool bForFire, cons
 	const float NormalizedPressure = (ClampedPressure - ClampedDeadzone) / (1.0f - ClampedDeadzone);
 	return FMath::Clamp(NormalizedPressure * FMath::Max(0.0f, Scale), 0.0f, 1.0f);
 }
+
+bool UZhoenusTouchPressureSettings::IsDefaultTouchForce(const float RawTouchForce)
+{
+	return FMath::IsNearlyEqual(RawTouchForce, DefaultTouchForce, 0.01f);
+}
+
+float UZhoenusTouchPressureSettings::NormalizeRawTouchForce(const float RawTouchForce)
+{
+	const float SanitizedForce = FMath::Max(0.0f, RawTouchForce);
+	if (SanitizedForce > DefaultTouchForce)
+	{
+		return FMath::Clamp(SanitizedForce / MaxTouchForce, 0.0f, 1.0f);
+	}
+
+	return FMath::Clamp(SanitizedForce, 0.0f, 1.0f);
+}
+
+float UZhoenusTouchPressureSettings::ResolveEffectivePressure(
+	const float RawTouchForce,
+	const float TravelPressure)
+{
+	const float ClampedTravelPressure = FMath::Clamp(TravelPressure, 0.0f, 1.0f);
+	if (RawTouchForce <= SMALL_NUMBER || IsDefaultTouchForce(RawTouchForce))
+	{
+		return ClampedTravelPressure;
+	}
+
+	return NormalizeRawTouchForce(RawTouchForce);
+}

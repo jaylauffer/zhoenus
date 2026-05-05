@@ -2,6 +2,8 @@
 
 #include "ZhoenusThumbstick.h"
 
+#include "ZhoenusTouchPressureSettings.h"
+
 namespace
 {
 	float GetTouchPressure(const FPointerEvent& Event)
@@ -59,6 +61,20 @@ FReply ZhoenusThumbstick::OnTouchEnded(const FGeometry& MyGeometry, const FPoint
 	return Reply;
 }
 
+FReply ZhoenusThumbstick::OnTouchForceChanged(const FGeometry& MyGeometry, const FPointerEvent& Event)
+{
+	EnsurePressureStateSize();
+
+	const int32 ControlIndex = FindControlIndexByPointer(Event.GetPointerIndex());
+	if (ControlIndex != INDEX_NONE)
+	{
+		SetControlPressure(ControlIndex, GetTouchPressure(Event));
+		return FReply::Handled();
+	}
+
+	return SVirtualJoystick::OnTouchForceChanged(MyGeometry, Event);
+}
+
 void ZhoenusThumbstick::Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime)
 {
 	EnsurePressureStateSize();
@@ -103,6 +119,7 @@ int32 ZhoenusThumbstick::GetActivePressureControlCount() const
 void ZhoenusThumbstick::ResetPressureState()
 {
 	ControlPressures.SetNumZeroed(Controls.Num());
+	ControlRawTouchForces.SetNumZeroed(Controls.Num());
 }
 
 void ZhoenusThumbstick::EnsurePressureStateSize() const
@@ -110,6 +127,10 @@ void ZhoenusThumbstick::EnsurePressureStateSize() const
 	if (ControlPressures.Num() != Controls.Num())
 	{
 		ControlPressures.SetNumZeroed(Controls.Num());
+	}
+	if (ControlRawTouchForces.Num() != Controls.Num())
+	{
+		ControlRawTouchForces.SetNumZeroed(Controls.Num());
 	}
 }
 
@@ -126,7 +147,34 @@ int32 ZhoenusThumbstick::FindControlIndexByPointer(int32 PointerIndex) const
 	return INDEX_NONE;
 }
 
-void ZhoenusThumbstick::SetControlPressure(int32 ControlIndex, float Pressure)
+float ZhoenusThumbstick::GetControlTravelPressure(const int32 ControlIndex) const
+{
+	EnsurePressureStateSize();
+	if (!Controls.IsValidIndex(ControlIndex))
+	{
+		return 0.0f;
+	}
+
+	const FControlData& Control = Controls[ControlIndex];
+	if (Control.CapturedPointerIndex == INDEX_NONE)
+	{
+		return 0.0f;
+	}
+
+	const float HalfWidth = Control.CorrectedVisualSize.X * 0.5f;
+	const float HalfHeight = Control.CorrectedVisualSize.Y * 0.5f;
+	if (HalfWidth <= SMALL_NUMBER || HalfHeight <= SMALL_NUMBER)
+	{
+		return 0.0f;
+	}
+
+	const FVector2D ScaledOffset(
+		Control.ThumbPosition.X / HalfWidth,
+		Control.ThumbPosition.Y / HalfHeight);
+	return FMath::Clamp(ScaledOffset.Size(), 0.0f, 1.0f);
+}
+
+void ZhoenusThumbstick::SetControlPressure(int32 ControlIndex, float RawTouchForce)
 {
 	EnsurePressureStateSize();
 	if (!ControlPressures.IsValidIndex(ControlIndex))
@@ -134,15 +182,20 @@ void ZhoenusThumbstick::SetControlPressure(int32 ControlIndex, float Pressure)
 		return;
 	}
 
-	const float SanitizedPressure = FMath::Max(0.0f, Pressure);
+	const float SanitizedRawForce = FMath::Max(0.0f, RawTouchForce);
+	const float SanitizedPressure = UZhoenusTouchPressureSettings::ResolveEffectivePressure(
+		SanitizedRawForce,
+		GetControlTravelPressure(ControlIndex));
 	const bool bWasActive = ControlPressures[ControlIndex] > 0.0f;
 	const bool bIsActive = SanitizedPressure > 0.0f;
 	if (FMath::IsNearlyEqual(ControlPressures[ControlIndex], SanitizedPressure))
 	{
+		ControlRawTouchForces[ControlIndex] = SanitizedRawForce;
 		return;
 	}
 
 	ControlPressures[ControlIndex] = SanitizedPressure;
+	ControlRawTouchForces[ControlIndex] = SanitizedRawForce;
 	if (!FMath::IsNearlyEqual(SanitizedPressure, 0.0f) || bWasActive != bIsActive)
 	{
 		OnStickPressureChanged.ExecuteIfBound(ControlIndex, SanitizedPressure, bIsActive);

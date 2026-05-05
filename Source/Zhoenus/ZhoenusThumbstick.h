@@ -25,6 +25,7 @@ public:
 	virtual FReply OnTouchStarted(const FGeometry& MyGeometry, const FPointerEvent& Event) override;
 	virtual FReply OnTouchMoved(const FGeometry& MyGeometry, const FPointerEvent& Event) override;
 	virtual FReply OnTouchEnded(const FGeometry& MyGeometry, const FPointerEvent& Event) override;
+	virtual FReply OnTouchForceChanged(const FGeometry& MyGeometry, const FPointerEvent& Event) override;
 	virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override;
 
 	float GetControlPressure(int32 ControlIndex) const;
@@ -35,8 +36,10 @@ public:
 private:
 	void EnsurePressureStateSize() const;
 	int32 FindControlIndexByPointer(int32 PointerIndex) const;
-	void SetControlPressure(int32 ControlIndex, float Pressure);
+	float GetControlTravelPressure(int32 ControlIndex) const;
+	void SetControlPressure(int32 ControlIndex, float RawTouchForce);
 
 	mutable TArray<float, TInlineAllocator<2>> ControlPressures;
+	mutable TArray<float, TInlineAllocator<2>> ControlRawTouchForces;
 	FOnStickPressureChanged OnStickPressureChanged;
 };
