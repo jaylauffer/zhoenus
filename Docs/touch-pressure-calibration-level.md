@@ -47,6 +47,9 @@ section:
 
 - `/Script/Zhoenus.ZhoenusTouchPressureSettings`
 
-The calibration level can save updated values without changing the existing
-flight code. A later gameplay pass can read from the same settings object when
-the team is ready to wire these values into the live touch path.
+The live touch path now reads those settings for `Stabilize` and `Fire`.
+When the platform reports a real force value, Zhoenus uses it. When Unreal
+reports `0.0` or the default ordinary-touch force of `1.0` instead of a
+force-sensitive signal, Zhoenus falls back to thumbstick travel so
+pressure-mode controls remain viable on iOS and Android devices without true
+force touch.

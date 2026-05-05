@@ -14,6 +14,8 @@ class UZhoenusTouchPressureSettings : public UObject
 public:
 	static constexpr float DefaultPressureDeadzone = 0.12f;
 	static constexpr float DefaultPressureScale = 1.0f;
+	static constexpr float DefaultTouchForce = 1.0f;
+	static constexpr float MaxTouchForce = 10.0f;
 
 	UZhoenusTouchPressureSettings();
 
@@ -32,4 +34,7 @@ public:
 	void ClampValues();
 	void RestoreFactoryDefaults();
 	float NormalizePressure(bool bForFire, float RawPressure) const;
+	static bool IsDefaultTouchForce(float RawTouchForce);
+	static float NormalizeRawTouchForce(float RawTouchForce);
+	static float ResolveEffectivePressure(float RawTouchForce, float TravelPressure);
 };

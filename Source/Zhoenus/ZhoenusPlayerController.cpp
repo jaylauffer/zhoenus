@@ -3,6 +3,7 @@
 #include "SaveThemAllGameInstance.h"
 #include "ZhoenusPawn.h"
 #include "ZhoenusThumbstick.h"
+#include "ZhoenusTouchPressureSettings.h"
 #include "ZhoenusTouchUI.h"
 #include "Components/Button.h"
 #include "Misc/OutputDevice.h"
@@ -167,38 +168,21 @@ void AZhoenusPlayerController::HandleStickPressureChanged(int32 ControlIndex, fl
 	RefreshTouchPressureActions();
 }
 
-float AZhoenusPlayerController::NormalizeTouchPressure(
-	const float RawPressure,
-	const float Deadzone,
-	const float Scale) const
-{
-	const float ClampedPressure = FMath::Clamp(RawPressure, 0.0f, 1.0f);
-	const float ClampedDeadzone = FMath::Clamp(Deadzone, 0.0f, 0.95f);
-	if (ClampedPressure <= ClampedDeadzone)
-	{
-		return 0.0f;
-	}
-
-	const float NormalizedPressure = (ClampedPressure - ClampedDeadzone) / (1.0f - ClampedDeadzone);
-	return FMath::Clamp(NormalizedPressure * FMath::Max(0.0f, Scale), 0.0f, 1.0f);
-}
-
 void AZhoenusPlayerController::RefreshTouchPressureActions()
 {
+	const UZhoenusTouchPressureSettings* PressureSettings = GetDefault<UZhoenusTouchPressureSettings>();
 	const float StabilizePressure =
 		bTouchStabilizePressureModeEnabled && PressureThumbstick.IsValid()
-			? NormalizeTouchPressure(
-				PressureThumbstick->GetControlPressure(StabilizePressureControlIndex),
-				StabilizePressureDeadzone,
-				StabilizePressureScale)
+			? PressureSettings->NormalizePressure(
+				false,
+				PressureThumbstick->GetControlPressure(StabilizePressureControlIndex))
 			: 0.0f;
 
 	const float FirePressure =
 		bTouchFirePressureModeEnabled && PressureThumbstick.IsValid()
-			? NormalizeTouchPressure(
-				PressureThumbstick->GetControlPressure(FirePressureControlIndex),
-				FirePressureDeadzone,
-				FirePressureScale)
+			? PressureSettings->NormalizePressure(
+				true,
+				PressureThumbstick->GetControlPressure(FirePressureControlIndex))
 			: 0.0f;
 
 	DisengageAutoCorrect(StabilizePressure);
