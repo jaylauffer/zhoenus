@@ -32,6 +32,7 @@ Runtime rule:
 - a clean save is counted when the `SpaceShip` crosses the valid goal trigger
 - stabilize must be inactive when the ship crosses the goal trigger
 - any collision with terrain, `DonutFlyers`, gate blockers, or other actors resets the current clean-save streak
+- `DonutFlyer` contact is always a clean-save failure: the ship bumping a flyer and a flyer bumping the ship both reset the attempt
 - goal trigger overlap is not a collision failure
 
 The gameplay state should expose the current clean-save streak so HUD, tuning,
@@ -95,7 +96,8 @@ When the gate is rebuilt or wrapped with helper volumes, keep these priorities:
 
 - A player approaching off-center gets pushed away from the windings instead of entering them.
 - A player approaching through the center can pass through without snagging.
-- A follower locked to the gate either crosses the trigger cleanly or is deflected away.
+- A player who bumps a `DonutFlyer`, or is bumped by one, loses the current clean-save attempt before the goal pass.
+- A follower locked to the gate crosses the trigger cleanly when shepherded through the corridor; if it approaches off-path, blockers keep it out of trap pockets and leave it recoverable for another pass.
 - No actor can remain lodged inside the windings.
 - The gate feels readable: line up, commit, save.
 
