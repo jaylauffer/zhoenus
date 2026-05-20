@@ -51,20 +51,16 @@ bool UZhoenusTouchPressureSettings::IsDefaultTouchForce(const float RawTouchForc
 float UZhoenusTouchPressureSettings::NormalizeRawTouchForce(const float RawTouchForce)
 {
 	const float SanitizedForce = FMath::Max(0.0f, RawTouchForce);
-	if (SanitizedForce > DefaultTouchForce)
-	{
-		return FMath::Clamp(SanitizedForce / MaxTouchForce, 0.0f, 1.0f);
-	}
-
 	return FMath::Clamp(SanitizedForce, 0.0f, 1.0f);
 }
 
 float UZhoenusTouchPressureSettings::ResolveEffectivePressure(
 	const float RawTouchForce,
-	const float TravelPressure)
+	const float TravelPressure,
+	const bool bHasSeenRealTouchForce)
 {
 	const float ClampedTravelPressure = FMath::Clamp(TravelPressure, 0.0f, 1.0f);
-	if (RawTouchForce <= SMALL_NUMBER || IsDefaultTouchForce(RawTouchForce))
+	if (!bHasSeenRealTouchForce && RawTouchForce <= SMALL_NUMBER)
 	{
 		return ClampedTravelPressure;
 	}
