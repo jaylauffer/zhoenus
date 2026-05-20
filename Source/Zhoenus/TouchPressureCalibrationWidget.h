@@ -32,6 +32,7 @@ public:
 
 	virtual FReply NativeOnTouchStarted(const FGeometry& InGeometry, const FPointerEvent& InGestureEvent) override;
 	virtual FReply NativeOnTouchMoved(const FGeometry& InGeometry, const FPointerEvent& InGestureEvent) override;
+	virtual FReply NativeOnTouchForceChanged(const FGeometry& InGeometry, const FPointerEvent& InGestureEvent) override;
 	virtual FReply NativeOnTouchEnded(const FGeometry& InGeometry, const FPointerEvent& InGestureEvent) override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual FReply NativeOnMouseMove(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
@@ -44,6 +45,8 @@ private:
 		bool bUsingMouse = false;
 		FVector2D LocalPosition = FVector2D::ZeroVector;
 		float RawPressure = 0.0f;
+		float TravelPressure = 0.0f;
+		float EffectivePressure = 0.0f;
 
 		void Reset()
 		{
@@ -51,6 +54,8 @@ private:
 			bUsingMouse = false;
 			LocalPosition = FVector2D::ZeroVector;
 			RawPressure = 0.0f;
+			TravelPressure = 0.0f;
+			EffectivePressure = 0.0f;
 		}
 
 		bool IsCaptured() const
@@ -82,7 +87,7 @@ private:
 	void RefreshPreview();
 	void RefreshSettingValueLabels();
 	void RefreshStatusText();
-	void ApplyTouchUpdate(bool bLeftStick, int32 PointerIndex, const FVector2D& LocalPosition, float RawPressure);
+	void ApplyTouchUpdate(bool bLeftStick, int32 PointerIndex, const FVector2D& LocalPosition, const FVector2D& LocalSize, float RawPressure);
 	bool ReleaseTouch(int32 PointerIndex);
 	bool ReleaseMousePreview();
 	bool UpdateTouchCapture(const FGeometry& InGeometry, const FPointerEvent& InGestureEvent);
@@ -90,9 +95,11 @@ private:
 	bool ResolveStickAtPosition(const FVector2D& LocalPosition, const FVector2D& LocalSize, bool& bOutLeftStick) const;
 	FVector2D GetStickCenter(bool bLeftStick, const FVector2D& LocalSize) const;
 	float GetStickRadius(const FVector2D& LocalSize) const;
-	float GetNormalizedPreview(bool bFire, float RawPressure) const;
+	float GetTravelPressureAtPosition(bool bLeftStick, const FVector2D& LocalPosition, const FVector2D& LocalSize) const;
+	float GetNormalizedPreview(bool bFire, float EffectivePressure) const;
 	void SetStatusMessage(const FText& Message);
-	static float ClampTouchForce(float RawPressure);
+	static float GetRawPressureBarPercent(float RawPressure);
+	static float GetFireIntervalSeconds(float FireOutput);
 
 	FStickCaptureState& GetStickState(bool bLeftStick);
 	const FStickCaptureState& GetStickState(bool bLeftStick) const;
@@ -164,7 +171,8 @@ private:
 	FStickCaptureState RightStickState;
 	bool bUpdatingControls = false;
 	bool bHasSeenTouchInput = false;
-	bool bHasSeenPositiveTouchForce = false;
+	bool bLeftStickHasSeenRealTouchForce = false;
+	bool bRightStickHasSeenRealTouchForce = false;
 	mutable FVector2D CachedLeftStickCenter = FVector2D::ZeroVector;
 	mutable FVector2D CachedRightStickCenter = FVector2D::ZeroVector;
 	mutable float CachedStickRadius = 0.0f;

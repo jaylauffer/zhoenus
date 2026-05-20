@@ -27,6 +27,8 @@ namespace
 	constexpr float MaxDeadzoneValue = 0.95f;
 	constexpr float MaxScaleValue = 2.0f;
 	constexpr int32 CircleSegments = 48;
+	constexpr float SlowestFireIntervalSeconds = 2.3f;
+	constexpr float FastestFireIntervalSeconds = 0.2f;
 
 	FSlateFontInfo MakeFont(int32 Size)
 	{
@@ -197,7 +199,7 @@ int32 UTouchPressureCalibrationWidget::NativePaint(
 		OutDrawElements,
 		LayerId + 2,
 		AllottedGeometry,
-		FVector2D(LocalSize.X * 0.18f, LocalSize.Y * 0.71f),
+		CachedLeftStickCenter,
 		CachedStickRadius * 1.15f,
 		FLinearColor(0.05f, 0.26f, 0.33f, 0.48f),
 		30.0f);
@@ -205,7 +207,7 @@ int32 UTouchPressureCalibrationWidget::NativePaint(
 		OutDrawElements,
 		LayerId + 2,
 		AllottedGeometry,
-		FVector2D(LocalSize.X * 0.82f, LocalSize.Y * 0.71f),
+		CachedRightStickCenter,
 		CachedStickRadius * 1.15f,
 		FLinearColor(0.05f, 0.26f, 0.33f, 0.48f),
 		30.0f);
@@ -315,6 +317,13 @@ FReply UTouchPressureCalibrationWidget::NativeOnTouchMoved(const FGeometry& InGe
 	return UpdateTouchCapture(InGeometry, InGestureEvent)
 		? FReply::Handled()
 		: Super::NativeOnTouchMoved(InGeometry, InGestureEvent);
+}
+
+FReply UTouchPressureCalibrationWidget::NativeOnTouchForceChanged(const FGeometry& InGeometry, const FPointerEvent& InGestureEvent)
+{
+	return UpdateTouchCapture(InGeometry, InGestureEvent)
+		? FReply::Handled()
+		: Super::NativeOnTouchForceChanged(InGeometry, InGestureEvent);
 }
 
 FReply UTouchPressureCalibrationWidget::NativeOnTouchEnded(const FGeometry& InGeometry, const FPointerEvent& InGestureEvent)
@@ -695,14 +704,20 @@ void UTouchPressureCalibrationWidget::RefreshPreview()
 {
 	RefreshSettingValueLabels();
 
-	const float StabilizeRaw = ClampTouchForce(LeftStickState.RawPressure);
-	const float FireRaw = ClampTouchForce(RightStickState.RawPressure);
-	const float StabilizeNormalized = GetNormalizedPreview(false, StabilizeRaw);
-	const float FireNormalized = GetNormalizedPreview(true, FireRaw);
+	const float StabilizeRaw = FMath::Max(0.0f, LeftStickState.RawPressure);
+	const float FireRaw = FMath::Max(0.0f, RightStickState.RawPressure);
+	const float StabilizeEffective = LeftStickState.EffectivePressure;
+	const float FireEffective = RightStickState.EffectivePressure;
+	const float StabilizeNormalized = GetNormalizedPreview(false, StabilizeEffective);
+	const float FireNormalized = GetNormalizedPreview(true, FireEffective);
 
 	if (StabilizeRawText)
 	{
-		StabilizeRawText->SetText(FText::FromString(FString::Printf(TEXT("%.3f"), StabilizeRaw)));
+		StabilizeRawText->SetText(FText::FromString(FString::Printf(
+			TEXT("raw %.3f  travel %.3f  effective %.3f"),
+			StabilizeRaw,
+			LeftStickState.TravelPressure,
+			StabilizeEffective)));
 	}
 	if (StabilizeNormalizedText)
 	{
@@ -710,15 +725,22 @@ void UTouchPressureCalibrationWidget::RefreshPreview()
 	}
 	if (FireRawText)
 	{
-		FireRawText->SetText(FText::FromString(FString::Printf(TEXT("%.3f"), FireRaw)));
+		FireRawText->SetText(FText::FromString(FString::Printf(
+			TEXT("raw %.3f  travel %.3f  effective %.3f"),
+			FireRaw,
+			RightStickState.TravelPressure,
+			FireEffective)));
 	}
 	if (FireNormalizedText)
 	{
-		FireNormalizedText->SetText(FText::FromString(FString::Printf(TEXT("%.3f"), FireNormalized)));
+		const FString FireText = FireNormalized > 0.0f
+			? FString::Printf(TEXT("%.3f  %.2fs/shot"), FireNormalized, GetFireIntervalSeconds(FireNormalized))
+			: FString::Printf(TEXT("%.3f  no fire"), FireNormalized);
+		FireNormalizedText->SetText(FText::FromString(FireText));
 	}
 	if (StabilizeRawBar)
 	{
-		StabilizeRawBar->SetPercent(StabilizeRaw);
+		StabilizeRawBar->SetPercent(GetRawPressureBarPercent(StabilizeRaw));
 	}
 	if (StabilizeNormalizedBar)
 	{
@@ -726,7 +748,7 @@ void UTouchPressureCalibrationWidget::RefreshPreview()
 	}
 	if (FireRawBar)
 	{
-		FireRawBar->SetPercent(FireRaw);
+		FireRawBar->SetPercent(GetRawPressureBarPercent(FireRaw));
 	}
 	if (FireNormalizedBar)
 	{
@@ -766,36 +788,50 @@ void UTouchPressureCalibrationWidget::RefreshStatusText()
 
 	if (LeftStickState.bUsingMouse || RightStickState.bUsingMouse)
 	{
-		HintText->SetText(FText::FromString(TEXT("Mouse preview uses a fixed raw force of 1.0. On device, press softer or harder on each pad to see real touch-force behavior.")));
+		HintText->SetText(FText::FromString(TEXT("Mouse preview uses raw 1.0, matching ordinary touch behavior; zero force uses travel fallback.")));
 		return;
 	}
 
-	if (bHasSeenTouchInput && !bHasSeenPositiveTouchForce && (LeftStickState.IsCaptured() || RightStickState.IsCaptured()))
+	const bool bHasSeenRealTouchForce = bLeftStickHasSeenRealTouchForce || bRightStickHasSeenRealTouchForce;
+	if (bHasSeenTouchInput && !bHasSeenRealTouchForce && (LeftStickState.IsCaptured() || RightStickState.IsCaptured()))
 	{
-		HintText->SetText(FText::FromString(TEXT("This device is currently reporting 0.0 touch force. The calibration map can still save settings, but live pressure preview will stay flat until touch force is available.")));
+		const bool bUsingTravelFallback =
+			(LeftStickState.IsCaptured() && LeftStickState.RawPressure <= SMALL_NUMBER)
+			|| (RightStickState.IsCaptured() && RightStickState.RawPressure <= SMALL_NUMBER);
+		HintText->SetText(bUsingTravelFallback
+			? FText::FromString(TEXT("This device is reporting zero touch force, so preview and live controls are using thumb travel fallback."))
+			: FText::FromString(TEXT("This device is reporting default touch force, so preview and live controls treat it as a full press.")));
 		return;
 	}
 
-	HintText->SetText(FText::FromString(TEXT("Left stick previews Stabilize. Right stick previews Fire. Drag or press inside either stick pad to compare raw force against the tuned output.")));
+	HintText->SetText(FText::FromString(TEXT("Left stick previews Stabilize. Right stick previews Fire. Raw, travel, effective, and tuned output now mirror live gameplay.")));
 }
 
 void UTouchPressureCalibrationWidget::ApplyTouchUpdate(
 	const bool bLeftStick,
 	const int32 PointerIndex,
 	const FVector2D& LocalPosition,
+	const FVector2D& LocalSize,
 	float RawPressure)
 {
 	FStickCaptureState& StickState = GetStickState(bLeftStick);
 	StickState.PointerIndex = PointerIndex;
 	StickState.bUsingMouse = false;
 	StickState.LocalPosition = LocalPosition;
-	StickState.RawPressure = ClampTouchForce(RawPressure);
+	StickState.RawPressure = FMath::Max(0.0f, RawPressure);
+	StickState.TravelPressure = GetTravelPressureAtPosition(bLeftStick, LocalPosition, LocalSize);
 
 	bHasSeenTouchInput = true;
-	if (StickState.RawPressure > 0.0f)
+	bool& bHasSeenRealTouchForce = bLeftStick ? bLeftStickHasSeenRealTouchForce : bRightStickHasSeenRealTouchForce;
+	if (StickState.RawPressure > SMALL_NUMBER
+		&& !UZhoenusTouchPressureSettings::IsDefaultTouchForce(StickState.RawPressure))
 	{
-		bHasSeenPositiveTouchForce = true;
+		bHasSeenRealTouchForce = true;
 	}
+	StickState.EffectivePressure = UZhoenusTouchPressureSettings::ResolveEffectivePressure(
+		StickState.RawPressure,
+		StickState.TravelPressure,
+		bHasSeenRealTouchForce);
 
 	RefreshPreview();
 }
@@ -838,20 +874,21 @@ bool UTouchPressureCalibrationWidget::ReleaseMousePreview()
 bool UTouchPressureCalibrationWidget::UpdateTouchCapture(const FGeometry& InGeometry, const FPointerEvent& InGestureEvent)
 {
 	const FVector2D LocalPosition = InGeometry.AbsoluteToLocal(InGestureEvent.GetScreenSpacePosition());
+	const FVector2D LocalSize = InGeometry.GetLocalSize();
 
 	if (LeftStickState.PointerIndex == InGestureEvent.GetPointerIndex())
 	{
-		ApplyTouchUpdate(true, InGestureEvent.GetPointerIndex(), LocalPosition, InGestureEvent.GetTouchForce());
+		ApplyTouchUpdate(true, InGestureEvent.GetPointerIndex(), LocalPosition, LocalSize, InGestureEvent.GetTouchForce());
 		return true;
 	}
 	if (RightStickState.PointerIndex == InGestureEvent.GetPointerIndex())
 	{
-		ApplyTouchUpdate(false, InGestureEvent.GetPointerIndex(), LocalPosition, InGestureEvent.GetTouchForce());
+		ApplyTouchUpdate(false, InGestureEvent.GetPointerIndex(), LocalPosition, LocalSize, InGestureEvent.GetTouchForce());
 		return true;
 	}
 
 	bool bLeftStick = false;
-	if (!ResolveStickAtPosition(LocalPosition, InGeometry.GetLocalSize(), bLeftStick))
+	if (!ResolveStickAtPosition(LocalPosition, LocalSize, bLeftStick))
 	{
 		return false;
 	}
@@ -862,7 +899,7 @@ bool UTouchPressureCalibrationWidget::UpdateTouchCapture(const FGeometry& InGeom
 		return false;
 	}
 
-	ApplyTouchUpdate(bLeftStick, InGestureEvent.GetPointerIndex(), LocalPosition, InGestureEvent.GetTouchForce());
+	ApplyTouchUpdate(bLeftStick, InGestureEvent.GetPointerIndex(), LocalPosition, LocalSize, InGestureEvent.GetTouchForce());
 	return true;
 }
 
@@ -874,8 +911,9 @@ bool UTouchPressureCalibrationWidget::UpdateMousePreview(const FGeometry& InGeom
 	}
 
 	const FVector2D LocalPosition = InGeometry.AbsoluteToLocal(InMouseEvent.GetScreenSpacePosition());
+	const FVector2D LocalSize = InGeometry.GetLocalSize();
 	bool bLeftStick = false;
-	if (!ResolveStickAtPosition(LocalPosition, InGeometry.GetLocalSize(), bLeftStick))
+	if (!ResolveStickAtPosition(LocalPosition, LocalSize, bLeftStick))
 	{
 		return false;
 	}
@@ -886,7 +924,12 @@ bool UTouchPressureCalibrationWidget::UpdateMousePreview(const FGeometry& InGeom
 	ActiveStick.PointerIndex = INDEX_NONE;
 	ActiveStick.bUsingMouse = true;
 	ActiveStick.LocalPosition = LocalPosition;
-	ActiveStick.RawPressure = 1.0f;
+	ActiveStick.RawPressure = UZhoenusTouchPressureSettings::DefaultTouchForce;
+	ActiveStick.TravelPressure = GetTravelPressureAtPosition(bLeftStick, LocalPosition, LocalSize);
+	ActiveStick.EffectivePressure = UZhoenusTouchPressureSettings::ResolveEffectivePressure(
+		ActiveStick.RawPressure,
+		ActiveStick.TravelPressure,
+		false);
 	RefreshPreview();
 	return true;
 }
@@ -929,9 +972,24 @@ float UTouchPressureCalibrationWidget::GetStickRadius(const FVector2D& LocalSize
 	return FMath::Clamp(FMath::Min(LocalSize.X, LocalSize.Y) * 0.115f, 82.0f, 150.0f);
 }
 
-float UTouchPressureCalibrationWidget::GetNormalizedPreview(const bool bFire, const float RawPressure) const
+float UTouchPressureCalibrationWidget::GetTravelPressureAtPosition(
+	const bool bLeftStick,
+	const FVector2D& LocalPosition,
+	const FVector2D& LocalSize) const
 {
-	return GetDefault<UZhoenusTouchPressureSettings>()->NormalizePressure(bFire, RawPressure);
+	const float StickRadius = GetStickRadius(LocalSize);
+	if (StickRadius <= SMALL_NUMBER)
+	{
+		return 0.0f;
+	}
+
+	const FVector2D StickCenter = GetStickCenter(bLeftStick, LocalSize);
+	return FMath::Clamp(FVector2D::Distance(LocalPosition, StickCenter) / StickRadius, 0.0f, 1.0f);
+}
+
+float UTouchPressureCalibrationWidget::GetNormalizedPreview(const bool bFire, const float EffectivePressure) const
+{
+	return GetDefault<UZhoenusTouchPressureSettings>()->NormalizePressure(bFire, EffectivePressure);
 }
 
 void UTouchPressureCalibrationWidget::SetStatusMessage(const FText& Message)
@@ -943,9 +1001,16 @@ void UTouchPressureCalibrationWidget::SetStatusMessage(const FText& Message)
 	}
 }
 
-float UTouchPressureCalibrationWidget::ClampTouchForce(float RawPressure)
+float UTouchPressureCalibrationWidget::GetRawPressureBarPercent(const float RawPressure)
 {
-	return FMath::Clamp(RawPressure, 0.0f, 1.0f);
+	return UZhoenusTouchPressureSettings::NormalizeRawTouchForce(RawPressure);
+}
+
+float UTouchPressureCalibrationWidget::GetFireIntervalSeconds(const float FireOutput)
+{
+	return FMath::GetRangeValue(
+		FVector2D(SlowestFireIntervalSeconds, FastestFireIntervalSeconds),
+		FMath::Clamp(FireOutput, 0.0f, 1.0f));
 }
 
 UTouchPressureCalibrationWidget::FStickCaptureState& UTouchPressureCalibrationWidget::GetStickState(const bool bLeftStick)

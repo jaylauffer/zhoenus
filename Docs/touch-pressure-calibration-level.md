@@ -31,7 +31,7 @@ gamepad-style layout with:
 
 - a left thumbstick preview for `Stabilize`
 - a right thumbstick preview for `Fire`
-- live raw touch-force readouts
+- live raw, travel fallback, and effective pressure readouts
 - live normalized output bars after deadzone + scale
 - save/reset controls
 - touch and mouse release events preserve the Save and Reset buttons instead of
@@ -48,8 +48,8 @@ section:
 - `/Script/Zhoenus.ZhoenusTouchPressureSettings`
 
 The live touch path now reads those settings for `Stabilize` and `Fire`.
-When the platform reports a real force value, Zhoenus uses it. When Unreal
-reports `0.0` or the default ordinary-touch force of `1.0` instead of a
-force-sensitive signal, Zhoenus falls back to thumbstick travel so
-pressure-mode controls remain viable on iOS and Android devices without true
-force touch.
+When the platform reports a real force value, Zhoenus uses it. Unreal's
+ordinary-touch default force of `1.0` is treated as a full press to preserve the
+pre-calibration fire cadence. When Unreal reports `0.0`, Zhoenus falls back to
+thumbstick travel so pressure-mode controls remain viable on devices without a
+usable force signal.

@@ -37,9 +37,11 @@ private:
 	void EnsurePressureStateSize() const;
 	int32 FindControlIndexByPointer(int32 PointerIndex) const;
 	float GetControlTravelPressure(int32 ControlIndex) const;
+	bool HasSeenRealTouchForce(int32 ControlIndex) const;
 	void SetControlPressure(int32 ControlIndex, float RawTouchForce);
 
 	mutable TArray<float, TInlineAllocator<2>> ControlPressures;
 	mutable TArray<float, TInlineAllocator<2>> ControlRawTouchForces;
+	mutable TArray<uint8, TInlineAllocator<2>> ControlHasSeenRealTouchForces;
 	FOnStickPressureChanged OnStickPressureChanged;
 };

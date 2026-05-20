@@ -10,5 +10,6 @@ public class ZhoenusTarget : TargetRules
 		Type = TargetType.Game;
 		ExtraModuleNames.Add("Zhoenus");
 		DefaultBuildSettings = BuildSettingsVersion.Latest;
+		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_7;
 	}
 }
