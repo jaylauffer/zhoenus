@@ -75,6 +75,7 @@ Build/*/**
 !Build/IOS/Resources/
 !Build/IOS/Resources/Graphics/
 !Build/IOS/Resources/Graphics/Icon*.png
+!Build/IOS/Resources/Graphics/LaunchScreenIOS.png
 !Build/Linux/Application.png
 !Build/Mac/Application.icns
 

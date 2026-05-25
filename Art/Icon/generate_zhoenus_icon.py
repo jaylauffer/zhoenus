@@ -214,6 +214,10 @@ def write_ios_icons(base: Image.Image) -> None:
         save_resized(base, size, ios_root / filename, rgb=True)
 
 
+def write_ios_launch_screen(base: Image.Image) -> None:
+    save_resized(base, 2048, ROOT / "Build" / "IOS" / "Resources" / "Graphics" / "LaunchScreenIOS.png", rgb=True)
+
+
 def write_desktop_icons(base: Image.Image) -> None:
     save_resized(base, 256, ROOT / "Build" / "Linux" / "Application.png", rgb=True)
 
@@ -241,7 +245,8 @@ def write_desktop_icons(base: Image.Image) -> None:
             ("icon_512x512.png", 512),
             ("icon_512x512@2x.png", 1024),
         ):
-            save_resized(base, size, iconset / filename, rgb=True)
+            # Keep alpha so AppKit reports 4 samples at 8 bits for Unreal's ICNS reader.
+            save_resized(base, size, iconset / filename)
 
         subprocess.run(
             ["iconutil", "-c", "icns", "-o", str(mac_root / "Application.icns"), str(iconset)],
@@ -257,6 +262,7 @@ def write_icon_set(base: Image.Image) -> None:
         base.resize((size, size), Image.Resampling.LANCZOS).save(ROOT / f"Zhoenus-{size}.png")
     write_android_icons(base)
     write_ios_icons(base)
+    write_ios_launch_screen(base)
     write_desktop_icons(base)
 
 
