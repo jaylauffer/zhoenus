@@ -1,6 +1,7 @@
 # Zhoenus Input and Gamepad Analysis
 
 Date: 2026-03-31
+Last updated: 2026-05-25
 
 ## Scope
 
@@ -13,6 +14,7 @@ This note documents the current state of the Zhoenus player-input stack, with em
 - The active ship blueprint `Content/Blueprints/Ships/ZhoenusSpaceShip.uasset` references `DefaultMappingContext`, not `LoadngoInputMapping`. `Content/Input/LoadngoInputMapping.uasset` looks orphaned.
 - The project still uses a hybrid input setup: Enhanced Input for flight, touch buttons through `AZhoenusPlayerController`, legacy axis mappings in `Config/DefaultInput.ini`, and a custom RawInput device profile.
 - `FireAction` was verified in-editor on 2026-03-31. The live ship mapping binds fire only to `Gamepad_RightTriggerAxis`; there is no mouse-fire binding in the active `DefaultMappingContext`.
+- Follow-up analysis on 2026-05-25 found that Mac physical gamepad thrust can latch because `ASpaceshipPawn` stores thrust in `CachedInput.W` and only clears it when Enhanced Input sends another thrust event. Mobile controls are a separate touch path and should not be changed for this fix.
 - The next step should not be another blind mapping tweak. The next step should be to consolidate the active input path, verify device detection against real runtime data, and run a short platform/controller test matrix.
 
 ## Active Runtime Path
@@ -221,7 +223,64 @@ Root-cause note:
 - A second root cause in `AdjustShip` was data-model drift: the UI row labeled `BackwardsAcceleration` had been treated like `MinSpeed`, which belongs to the `Convert` screen. `AdjustShip` now uses a real `ReverseAcceleration` stat for backward thrust, while `Convert` remains responsible for reverse speed limit changes.
 - The current `AdjustShip` spend/refund rule is intentionally symmetric and now code-owned in `USaveThemAllGameInstance`. Previewing or saving a lower stat returns points at the same rate that raising that stat consumes them. If design later wants asymmetry, that should be a conscious rules change there rather than a side effect of widget arithmetic.
 
+## 2026-05-25 Mac Physical Gamepad Thrust Latch
+
+### Symptom
+
+When playing on Mac with a physical gamepad, thrust can remain pinned at the last nonzero value after the right thumbstick Y axis returns to its neutral position.
+
+The mobile controls are not implicated in this behavior. Touch still routes through `AZhoenusPlayerController`, `UZhoenusTouchUI`, and the touch interface asset, not through the same physical `Gamepad_RightY` Enhanced Input mapping.
+
+### Current thrust behavior
+
+`ASpaceshipPawn::ThrustInput` writes the incoming `ThrustAction` value into `CachedInput.W`:
+
+- `Triggered` calls `ThrustInput`
+- `Completed` calls `ThrustInput`
+- `Canceled` calls `ThrustInput`
+
+`ASpaceshipPawn::Tick` then treats `CachedInput.W` as the authoritative thrust input every frame. The HUD also reads thrust from `CachedInput.W`.
+
+Implication:
+
+- If the Mac gamepad path does not deliver a final zero-valued thrust callback, the previous nonzero value stays cached.
+- Neutral physical stick position does not automatically clear `CachedInput.W`.
+- The current `Completed` and `Canceled` bindings assume the event payload is zero, which is too fragile for this failure mode.
+
+### Deadzone note
+
+`Config/DefaultInput.ini` declares `0.25` deadzones for `Gamepad_LeftX`, `Gamepad_LeftY`, `Gamepad_RightX`, and `Gamepad_RightY`, but the local Enhanced Input engine source defaults `input.GlobalAxisConfigMode` to `0`, meaning "Mouse Only." In that default mode, legacy axis properties are not applied to gamepad mappings as hidden Enhanced Input modifiers.
+
+Implication:
+
+- The checked-in `.ini` deadzone should not be treated as reliable protection for the active `Gamepad_RightY -> ThrustInputAction` path.
+- A small Mac controller drift or platform axis centering issue can keep `ThrustAction` active.
+- The fix should put the physical gamepad deadzone in the active mapping/action path, or in narrowly scoped pawn code, rather than relying on global legacy axis settings.
+
+### Preferred fix boundary
+
+The fix should target physical gamepad thrust only:
+
+- Keep mobile/touch controls unchanged.
+- Do not change the touch interface asset as part of this issue.
+- Do not use a broad global input setting as the primary fix if a mapping/action modifier or scoped C++ clear path will solve it.
+- Preserve the existing thrust sign convention unless a separate control-design change is intended.
+
+Recommended implementation:
+
+1. Add a real deadzone to `Gamepad_RightY -> ThrustInputAction` in the active `DefaultMappingContext`, starting around `0.12` to `0.20` and tuning against the actual Mac controller.
+2. Split thrust release handling in `ASpaceshipPawn`: keep `Triggered` bound to `ThrustInput`, but bind `Completed` and `Canceled` to a dedicated clear handler that sets `CachedInput.W = 0.f`.
+3. If editing the input asset is risky, add a narrowly scoped code-side deadzone in `ThrustInput` as a temporary fallback, but still prefer asset-level mapping modifiers for controller feel.
+
 ## Recommended Next Steps
+
+### Priority 0: Fix Mac physical gamepad thrust latch
+
+- Verify the live Mac controller's raw `Gamepad_RightY` value, modified `ThrustAction` value, and trigger state in PIE using Enhanced Input debugging or temporary logging.
+- Add a deadzone to the active physical gamepad thrust mapping/action path, not to the mobile touch path.
+- Add a dedicated `ClearThrustInput` handler for `Completed` and `Canceled` so release events clear cached thrust explicitly.
+- Validate that the thrust HUD bar returns to zero when the right stick returns to neutral.
+- Regression-test mobile/touch controls to confirm this change did not affect them.
 
 ### Priority 1: Consolidate the active control path
 
@@ -246,6 +305,7 @@ Root-cause note:
 
 Minimum matrix:
 
+- Physical gamepad on Mac
 - Xbox or XInput-compatible controller on Windows
 - DualSense or PS-style controller on Windows
 - Keyboard and mouse
@@ -268,16 +328,21 @@ For each device, verify:
 
 ## Suggested Implementation Order
 
-1. Decide whether desktop mouse-fire should exist. If yes, add it to `DefaultMappingContext` or another explicit live path.
-2. Verify current controller hardware IDs against the RawInput config.
-3. Replace `LastInputSource` with engine-level input-type detection.
-4. Move deadzone tuning into one clear place.
-5. Remove stale mappings and unused input assets once the live path is confirmed.
-6. Keep CommonUI menu focus rules in native code for `PowerUp`, `AdjustShip`, and `ConvertSpeed`, so controller navigation is not dependent on hidden blueprint widgets or non-selecting buttons.
+1. Instrument or debug the Mac physical gamepad path and capture raw `Gamepad_RightY`, modified `ThrustAction`, and trigger events at neutral and full deflection.
+2. Add a physical-gamepad thrust deadzone in `DefaultMappingContext` or the `ThrustInputAction` path.
+3. Add a dedicated C++ clear handler for thrust `Completed` and `Canceled` events.
+4. Validate Mac gamepad neutral behavior and mobile/touch controls before changing any broader input settings.
+5. Decide whether desktop mouse-fire should exist. If yes, add it to `DefaultMappingContext` or another explicit live path.
+6. Verify current controller hardware IDs against the RawInput config.
+7. Replace `LastInputSource` with engine-level input-type detection.
+8. Move the remaining deadzone tuning into one clear place.
+9. Remove stale mappings and unused input assets once the live path is confirmed.
+10. Keep CommonUI menu focus rules in native code for `PowerUp`, `AdjustShip`, and `ConvertSpeed`, so controller navigation is not dependent on hidden blueprint widgets or non-selecting buttons.
 
 ## Open Questions
 
 - Is RawInput still intentionally required for a specific controller, or is XInput/CommonInput enough for current targets?
+- Which exact Mac controller model and hardware path should be treated as the baseline physical-gamepad target?
 - Should desktop mouse-fire be restored, or is the current gamepad-only `FireAction` binding intentional?
 - Is `LoadngoInputMapping` safe to delete, or is it still referenced from an uninspected map or blueprint?
 - Should keyboard and mouse remain first-class controls, or is controller-first the target for this game mode?
