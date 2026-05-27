@@ -11,5 +11,11 @@ public class ZhoenusTarget : TargetRules
 		ExtraModuleNames.Add("Zhoenus");
 		DefaultBuildSettings = BuildSettingsVersion.Latest;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_7;
+
+		if (Target.Platform == UnrealTargetPlatform.Mac)
+		{
+			BuildEnvironment = TargetBuildEnvironment.Unique;
+			AdditionalCompilerArguments = "-Wno-implicit-int-float-conversion -Wno-character-conversion";
+		}
 	}
 }

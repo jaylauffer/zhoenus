@@ -72,6 +72,10 @@ Build/*/**
 !Build/Android/res/drawable-hdpi/icon.png
 !Build/Android/res/drawable-xhdpi/
 !Build/Android/res/drawable-xhdpi/icon.png
+!Build/Android/res/drawable-xxhdpi/
+!Build/Android/res/drawable-xxhdpi/icon.png
+!Build/Android/res/drawable-xxxhdpi/
+!Build/Android/res/drawable-xxxhdpi/icon.png
 !Build/IOS/Resources/
 !Build/IOS/Resources/Graphics/
 !Build/IOS/Resources/Graphics/Icon*.png

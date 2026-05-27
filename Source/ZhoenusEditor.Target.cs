@@ -11,5 +11,11 @@ public class ZhoenusEditorTarget : TargetRules
 		ExtraModuleNames.AddRange(new string[] { "Zhoenus", "ZhoenusEditorExt" });
 		DefaultBuildSettings = BuildSettingsVersion.Latest;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
+
+		if (Target.Platform == UnrealTargetPlatform.Mac)
+		{
+			BuildEnvironment = TargetBuildEnvironment.Unique;
+			AdditionalCompilerArguments = "-Wno-implicit-int-float-conversion -Wno-character-conversion";
+		}
 	}
 }
