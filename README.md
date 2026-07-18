@@ -15,6 +15,7 @@ UE5 flying-action game project centered on the `SaveThemAll` loop: fly the ship,
 
 - [Input and gamepad analysis](Docs/gamepad-controls-analysis.md)
 - [Point system and convert flow](Docs/point-system-and-convert.md)
+- [Turbo module design](Docs/turbo-module-design.md)
 - [Donut flyer spawn analysis](Docs/donutflyer-spawn-analysis.md)
 - [Donut flyer aggro design](Docs/donutflyer-aggro-design.md)
 - [Donut flyer goal-lock analysis](Docs/donutflyer-goal-lock-analysis.md)
