@@ -49,6 +49,8 @@ public:
 protected:
 	FText BuildFallbackReply(const FText& PlayerUtterance) const;
 	FText BuildGameplayHint() const;
+	FString BuildModelInstructions() const;
+	void AskLocalModel(const FText& PlayerUtterance);
 	int32 GetFollowerCount(const ASpaceshipPawn* Ship) const;
 	void ApplyVisualAssets();
 	void FacePlayerCamera();
@@ -93,10 +95,27 @@ protected:
 	UPROPERTY(Config, EditAnywhere, BlueprintReadWrite, Category = "Assistant|Gameplay", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float LowSaveFraction = 0.3f;
 
+	/** Ask loadngo's gpt_oss_serve on this machine; the built-in reply shows meanwhile and stays when no model answers. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadWrite, Category = "Assistant|Model")
+	bool bAskLocalModel = true;
+
+	/** The model's Unix socket; empty means ~/.loadngo/node/gpt-oss.sock. -ZhoenusModelSocket= overrides it. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadWrite, Category = "Assistant|Model")
+	FString ModelSocketPath;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadWrite, Category = "Assistant|Model", meta = (ClampMin = "1000"))
+	int32 ModelDeadlineMs = 30000;
+
+	/** How long a model's answer stays before gameplay hints resume. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadWrite, Category = "Assistant|Model", meta = (ClampMin = "1.0"))
+	float ModelReplyHoldSeconds = 12.f;
+
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "Assistant|State")
 	bool bSpeaking = false;
 
 private:
 	float TimeUntilNextHint = 0.f;
 	float SpeakingPulseTime = 0.f;
+	/** The latest question sent to the model; an older reply is dropped. */
+	int32 ModelRequestSerial = 0;
 };

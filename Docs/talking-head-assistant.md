@@ -51,12 +51,27 @@ The first native seam is:
 - `OnPlayerUtterance`
 - `SetAssistantLine(FText NewLine, bool bNewSpeaking)`
 
-Today `SubmitPlayerUtterance` produces local fallback replies. A later bridge can
-bind to `OnPlayerUtterance`, send context to a local `llama-server`/`gpt-oss`
-endpoint, then call `SetAssistantLine` with the model response.
+`SubmitPlayerUtterance` shows the built-in reply at once, then asks the local
+model: loadngo's `gpt_oss_serve` (loadngo `docs/GPT_OSS.md`, "Serving"), one JSON
+line per call on its Unix socket, `~/.loadngo/node/gpt-oss.sock`. No HTTP and no
+token: the socket's directory is only the user's. The call runs on a pool thread
+(`ZhoenusModelCall::Ask`, blocked in the kernel until the reply), and the answer
+replaces the caption on the game thread and stays `ModelReplyHoldSeconds` before
+gameplay hints resume. A newer question drops an older reply.
 
-Keep that model bridge optional. The assistant must remain useful offline and
-must not block flight, scoring, or the power-up loop.
+The model stays optional. With no server, a busy one or a late reply, the
+built-in reply stays and the log says why (`LogZhoenusTalkingHead`). Nothing
+waits on the model in flight, scoring or the power-up loop.
+
+How the player asks is not built yet. For now:
+
+- `Zhoenus.Ask <question>` in the console;
+- `-ZhoenusAsk="<question>"` on the command line asks once the head is up
+  (demos and tests);
+- `-ZhoenusModelSocket=<path>` points at another socket.
+
+Start the model with `cargo run --release -p loadngo-gpt-oss --bin gpt_oss_serve`
+in `~/pudding/loadngo`.
 
 ## Config
 
@@ -74,6 +89,7 @@ Important fields:
 - `FaceTexturePath`
 - `HintRefreshSeconds`
 - `bAutoUpdateGameplayHints`
+- `bAskLocalModel`, `ModelSocketPath`, `ModelDeadlineMs`, `ModelReplyHoldSeconds`
 
 ## Guardrails
 

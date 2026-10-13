@@ -2,6 +2,12 @@
 
 #include "ZhoenusTalkingHeadAssistant.h"
 #include "DonutFlyerPawn.h"
+#include "ZhoenusModelCall.h"
+#include "Async/Async.h"
+#include "EngineUtils.h"
+#include "HAL/IConsoleManager.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "SaveThemAllGameState.h"
 #include "SpaceshipPawn.h"
 #include "Components/BillboardComponent.h"
@@ -12,6 +18,27 @@
 #include "Engine/Texture2D.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Kismet/GameplayStatics.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogZhoenusTalkingHead, Log, All);
+
+namespace
+{
+	/** `Zhoenus.Ask How do I save the flyers?` in the console asks the talking head. */
+	FAutoConsoleCommandWithWorldAndArgs AskCommand(
+		TEXT("Zhoenus.Ask"),
+		TEXT("Asks the talking head a question, as the player would."),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+		{
+			const FString Question = FString::Join(Args, TEXT(" "));
+			TActorIterator<AZhoenusTalkingHeadAssistant> It(World);
+			if (!It)
+			{
+				UE_LOG(LogZhoenusTalkingHead, Warning, TEXT("Zhoenus.Ask: no talking head in this level"));
+				return;
+			}
+			It->SubmitPlayerUtterance(FText::FromString(Question));
+		}));
+}
 
 AZhoenusTalkingHeadAssistant::AZhoenusTalkingHeadAssistant()
 {
@@ -69,6 +96,13 @@ void AZhoenusTalkingHeadAssistant::BeginPlay()
 	ApplyVisualAssets();
 	SetAssistantLine(DefaultLine, false);
 	TimeUntilNextHint = 0.f;
+
+	// For demos and tests: -ZhoenusAsk="How do I save the flyers?" asks once the head is up.
+	FString Question;
+	if (FParse::Value(FCommandLine::Get(), TEXT("ZhoenusAsk="), Question) && !Question.IsEmpty())
+	{
+		SubmitPlayerUtterance(FText::FromString(Question));
+	}
 }
 
 void AZhoenusTalkingHeadAssistant::Tick(float DeltaSeconds)
@@ -99,6 +133,63 @@ void AZhoenusTalkingHeadAssistant::SubmitPlayerUtterance(const FText& PlayerUtte
 {
 	OnPlayerUtterance.Broadcast(this, PlayerUtterance);
 	SetAssistantLine(BuildFallbackReply(PlayerUtterance), true);
+	TimeUntilNextHint = HintRefreshSeconds;
+	if (bAskLocalModel)
+	{
+		AskLocalModel(PlayerUtterance);
+	}
+}
+
+void AZhoenusTalkingHeadAssistant::AskLocalModel(const FText& PlayerUtterance)
+{
+	FString Socket = ModelSocketPath.IsEmpty() ? ZhoenusModelCall::DefaultSocketPath() : ModelSocketPath;
+	FParse::Value(FCommandLine::Get(), TEXT("ZhoenusModelSocket="), Socket);
+	const FString Instructions = BuildModelInstructions();
+	const FString Question = PlayerUtterance.ToString();
+	const int32 Deadline = ModelDeadlineMs;
+	const int32 Serial = ++ModelRequestSerial;
+	TWeakObjectPtr<AZhoenusTalkingHeadAssistant> WeakThis(this);
+	UE_LOG(LogZhoenusTalkingHead, Display, TEXT("asking the model at %s: %s"), *Socket, *Question);
+
+	// The call blocks in the kernel until the reply, so it runs off the game thread.
+	Async(EAsyncExecution::ThreadPool, [WeakThis, Socket, Instructions, Question, Deadline, Serial]()
+	{
+		const ZhoenusModelCall::FResult Result = ZhoenusModelCall::Ask(Socket, Instructions, Question, Deadline);
+		AsyncTask(ENamedThreads::GameThread, [WeakThis, Result, Serial]()
+		{
+			AZhoenusTalkingHeadAssistant* Head = WeakThis.Get();
+			if (Head == nullptr || Serial != Head->ModelRequestSerial)
+			{
+				return;
+			}
+			if (!Result.IsOk() || Result.Text.IsEmpty())
+			{
+				UE_LOG(LogZhoenusTalkingHead, Display, TEXT("no model reply (%s: %s) after %.2f s; kept the built-in reply"),
+					*Result.Status, *Result.Text, Result.Seconds);
+				return;
+			}
+			UE_LOG(LogZhoenusTalkingHead, Display, TEXT("model replied in %.2f s: %s"), Result.Seconds, *Result.Text);
+			Head->SetAssistantLine(FText::FromString(Result.Text), true);
+			Head->TimeUntilNextHint = Head->ModelReplyHoldSeconds;
+		});
+	});
+}
+
+FString AZhoenusTalkingHeadAssistant::BuildModelInstructions() const
+{
+	const UWorld* World = GetWorld();
+	const ASaveThemAllGameState* GameState = World != nullptr ? World->GetGameState<ASaveThemAllGameState>() : nullptr;
+	const int32 Saved = GameState != nullptr ? GameState->Saved : 0;
+	const int32 Total = GameState != nullptr ? GameState->Total : 0;
+	const int32 Followers = GetFollowerCount(Cast<ASpaceshipPawn>(UGameplayStatics::GetPlayerPawn(this, 0)));
+	return FString::Printf(
+		TEXT("You are Jay's local head in the machine: the talking head above the base in Zhoenus, ")
+		TEXT("in its SaveThemAll level. The player flies a ship with smooth six-axis control, wakes the ")
+		TEXT("donut flyers, gathers them behind the ship as followers and leads them cleanly through the ")
+		TEXT("goal gate. ZapEm shots spend battery to wake or steer flyers; the battery recharges. ")
+		TEXT("Right now %d of %d flyers are saved and %d follow the ship. ")
+		TEXT("Answer the player in one or two short sentences, in character, with useful guidance."),
+		Saved, Total, Followers);
 }
 
 void AZhoenusTalkingHeadAssistant::SetAssistantLine(const FText& NewLine, bool bNewSpeaking)
